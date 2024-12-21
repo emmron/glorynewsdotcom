@@ -34,12 +34,13 @@
 		"svelte": "^5.0.0"
 	},
 	"devDependencies": {
-		"@sveltejs/adapter-static": "^3.0.0",
+		"@sveltejs/adapter-netlify": "^4.1.0",
 		"@sveltejs/kit": "^2.0.0",
 		"@sveltejs/package": "^2.0.0",
 		"@sveltejs/vite-plugin-svelte": "^4.0.0",
 		"@tailwindcss/line-clamp": "^0.4.4",
 		"@tailwindcss/typography": "^0.5.10",
+		"@tsconfig/svelte": "^5.0.0",
 		"@types/node": "^20.0.0",
 		"publint": "^0.2.0",
 		"rollup": "^4.9.0",
