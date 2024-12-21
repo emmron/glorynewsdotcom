@@ -1,4 +1,4 @@
-import type { PageLoad } from './$types.js';
+import type { PageLoad } from '@sveltejs/kit';
 
 export const load: PageLoad = async ({ params }: { params: { id: string } }) => {
   return {

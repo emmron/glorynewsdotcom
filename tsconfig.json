@@ -17,7 +17,8 @@
 			"$lib/*": ["src/lib/*"],
 			"$app": ["./node_modules/@sveltejs/kit/types/$app"],
 			"$app/*": ["./node_modules/@sveltejs/kit/types/$app/*"]
-		}
+		},
+		"types": ["svelte"]
 	},
 	"include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.js", "src/**/*.svelte"],
 	"references": [{ "path": "./tsconfig.node.json" }]
