@@ -7,8 +7,8 @@ const config = {
 
 	kit: {
 		adapter: adapter({
-			pages: '.vercel/output/static',
-			assets: '.vercel/output/static',
+			pages: 'build',
+			assets: 'build',
 			fallback: '404.html',
 			precompress: false,
 			strict: true
