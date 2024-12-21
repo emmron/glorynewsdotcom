@@ -163,7 +163,7 @@
   .news__grid {
     display: grid;
     grid-template-columns: repeat(1, 1fr);
-    gap: 2.5rem;
+    gap: 3rem;
     justify-items: center;
     max-width: 1400px;
     margin: 0 auto;
@@ -179,15 +179,15 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: radial-gradient(circle at center, rgba(147, 51, 234, 0.08) 0%, transparent 80%);
+    background: radial-gradient(circle at center, rgba(147, 51, 234, 0.1) 0%, transparent 70%);
     pointer-events: none;
-    filter: blur(40px);
+    filter: blur(60px);
   }
 
   @keyframes fadeIn {
     from {
       opacity: 0;
-      transform: translateY(30px);
+      transform: translateY(20px);
     }
     to {
       opacity: 1;
@@ -197,33 +197,33 @@
 
   @media (min-width: 640px) {
     .news__grid {
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 2.5rem;
-      padding: 2.5rem;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 3rem;
+      padding: 3rem;
     }
   }
 
   @media (min-width: 768px) {
     .news__grid {
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 3rem;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 3.5rem;
     }
   }
 
   @media (min-width: 1024px) {
     .news__grid {
-      grid-template-columns: repeat(3, minmax(300px, 1fr));
-      gap: 3.5rem;
-      padding: 3rem;
+      grid-template-columns: repeat(3, minmax(320px, 1fr));
+      gap: 4rem;
+      padding: 4rem;
     }
   }
 
   @media (min-width: 1280px) {
     .news__grid {
-      grid-template-columns: repeat(3, minmax(340px, 1fr));
+      grid-template-columns: repeat(3, minmax(360px, 1fr));
       max-width: 1280px;
-      gap: 4rem;
-      padding: 3.5rem;
+      gap: 4.5rem;
+      padding: 4.5rem;
     }
   }
 
@@ -231,25 +231,26 @@
     display: flex;
     flex-direction: column;
     background: rgba(255, 255, 255, 0.98);
-    border-radius: 1.25rem;
+    border-radius: 1.5rem;
     box-shadow: 
       0 4px 6px -1px rgba(0, 0, 0, 0.08), 
       0 2px 4px -1px rgba(0, 0, 0, 0.04),
-      0 0 0 1px rgba(147, 51, 234, 0.08);
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      0 0 0 1px rgba(147, 51, 234, 0.1);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
     width: 100%;
-    max-width: 440px;
+    max-width: 460px;
     position: relative;
     backdrop-filter: blur(10px);
+    will-change: transform;
   }
 
   .news-card:hover {
-    transform: translateY(-8px) scale(1.02);
+    transform: translateY(-12px) scale(1.02);
     box-shadow: 
-      0 20px 25px -5px rgba(0, 0, 0, 0.1),
-      0 10px 10px -5px rgba(0, 0, 0, 0.04),
-      0 0 0 2px rgba(147, 51, 234, 0.1);
+      0 25px 30px -8px rgba(0, 0, 0, 0.12),
+      0 15px 15px -6px rgba(0, 0, 0, 0.06),
+      0 0 0 2px rgba(147, 51, 234, 0.15);
   }
 
   .news-card::after {
@@ -259,9 +260,9 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.95) 100%);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.98) 100%);
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.4s ease;
   }
 
   .news-card:hover::after {
@@ -272,7 +273,7 @@
     aspect-ratio: 16/9;
     position: relative;
     overflow: hidden;
-    border-bottom: 2px solid rgba(147, 51, 234, 0.12);
+    border-bottom: 2px solid rgba(147, 51, 234, 0.15);
   }
 
   .news-card__image {
@@ -280,20 +281,21 @@
     height: 100%;
     object-fit: cover;
     transform: scale(1);
-    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
     will-change: transform;
+    loading: lazy;
   }
 
   .news-card:hover .news-card__image {
-    transform: scale(1.1);
+    transform: scale(1.15);
   }
 
   .news-card__content {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
-    padding: 2rem;
-    gap: 1.5rem;
+    padding: 2.5rem;
+    gap: 1.75rem;
     position: relative;
     z-index: 1;
     background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.9) 100%);
