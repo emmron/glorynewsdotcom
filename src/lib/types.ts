@@ -6,4 +6,23 @@ export interface NewsItem {
   category: string;
   imageUrl: string;
   url: string;
+}
+
+export interface WordPressPost {
+  id: number;
+  title: {
+    rendered: string;
+  };
+  excerpt: {
+    rendered: string;
+  };
+  content: {
+    rendered: string;
+  };
+  date: string;
+  link: string;
+  _embedded?: {
+    'wp:term'?: Array<Array<{ name: string }>>;
+    'wp:featuredmedia'?: Array<{ source_url: string }>;
+  };
 } 

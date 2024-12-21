@@ -1,25 +1,6 @@
-import type { NewsItem } from '$lib/types';
+import type { NewsItem, WordPressPost } from '$lib/types';
 
 const GLORY_BLOG_API = 'https://www.perthglory.com.au/wp-json/wp/v2';
-
-interface WordPressPost {
-  id: number;
-  title: {
-    rendered: string;
-  };
-  excerpt: {
-    rendered: string;
-  };
-  content: {
-    rendered: string;
-  };
-  date: string;
-  link: string;
-  _embedded?: {
-    'wp:term'?: Array<Array<{ name: string }>>;
-    'wp:featuredmedia'?: Array<{ source_url: string }>;
-  };
-}
 
 export async function fetchGloryNews(): Promise<NewsItem[]> {
   try {
