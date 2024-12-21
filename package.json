@@ -3,7 +3,7 @@
 	"version": "0.0.1",
 	"scripts": {
 		"dev": "vite dev",
-		"build": "vite build --outDir public",
+		"build": "vite build",
 		"preview": "vite preview",
 		"sync": "svelte-kit sync",
 		"package": "svelte-kit sync && svelte-package && publint",
