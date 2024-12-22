@@ -4,15 +4,27 @@ const GLORY_BLOG_API = 'https://www.perthglory.com.au/wp-json/wp/v2';
 
 export async function fetchGloryNews(): Promise<NewsItem[]> {
     try {
-        const response = await fetch(`${GLORY_BLOG_API}/posts?_embed=true&per_page=36&orderby=date&order=desc`);
+        // Fetch both general news and NSL articles
+        const [generalNews, nslNews] = await Promise.all([
+            fetch(`${GLORY_BLOG_API}/posts?_embed=true&per_page=24&orderby=date&order=desc`),
+            fetch(`${GLORY_BLOG_API}/posts?_embed=true&per_page=12&orderby=date&order=desc&categories=nsl`)
+        ]);
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        if (!generalNews.ok || !nslNews.ok) {
+            throw new Error(`HTTP error! status: ${generalNews.status} ${nslNews.status}`);
         }
         
-        const posts = await response.json();
+        const [generalPosts, nslPosts] = await Promise.all([
+            generalNews.json(),
+            nslNews.json()
+        ]);
         
-        return posts.map((post: any) => ({
+        // Combine and sort all posts by date
+        const allPosts = [...generalPosts, ...nslPosts].sort((a, b) => 
+            new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+        
+        return allPosts.map((post: any) => ({
             id: post.id.toString(),
             title: post.title.rendered,
             summary: post.excerpt.rendered

@@ -163,7 +163,7 @@
                 </div>
                 <div class="news-card__content">
                   <div class="news-card__meta">
-                    <span class="news-card__category badge badge-purple">
+                    <span class="news-card__category badge {news.category.toLowerCase().includes('nsl') ? 'badge-nsl' : 'badge-purple'}">
                       {news.category}
                     </span>
                     <time class="news-card__date text-sm text-gray-500">{news.date}</time>
@@ -403,9 +403,18 @@
     color: #7c3aed;
   }
 
+  .badge-nsl {
+    background-color: rgba(234, 88, 12, 0.1);
+    color: #ea580c;
+  }
+
   .badge:hover {
     background-color: rgba(124, 58, 237, 0.15);
     transform: translateY(-1px);
+  }
+
+  .badge-nsl:hover {
+    background-color: rgba(234, 88, 12, 0.15);
   }
 
   .news__load-more {
