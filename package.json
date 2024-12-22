@@ -4,7 +4,7 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
-		"preview": "vite preview", 
+		"preview": "vite preview",
 		"sync": "npx svelte-kit sync",
 		"package": "npx svelte-kit sync && svelte-package && publint",
 		"prepublishOnly": "npm run package",
@@ -34,19 +34,20 @@
 		"svelte": "^5.0.0"
 	},
 	"devDependencies": {
-		"@sveltejs/kit": "^2.0.0",
+		"@sveltejs/adapter-auto": "^3.3.1",
+		"@sveltejs/kit": "^2.14.0",
 		"@sveltejs/package": "^2.0.0",
 		"@sveltejs/vite-plugin-svelte": "^4.0.0",
 		"@tailwindcss/line-clamp": "^0.4.4",
 		"@tailwindcss/typography": "^0.5.10",
-		"@tsconfig/svelte": "^5.0.0",
-		"@types/node": "^20.0.0",
+		"@tsconfig/svelte": "^5.0.4",
+		"@types/node": "^20.17.10",
 		"esbuild": "0.19.12",
 		"publint": "^0.2.0",
 		"rollup": "^4.9.0",
-		"svelte": "^5.0.0",
-		"svelte-check": "^4.0.0",
-		"typescript": "^5.0.0",
+		"svelte": "^5.15.0",
+		"svelte-check": "^4.1.1",
+		"typescript": "^5.7.2",
 		"vite": "^5.4.11"
 	},
 	"dependencies": {
