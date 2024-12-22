@@ -7,10 +7,15 @@ const config = {
 
 	kit: {
 		adapter: adapter({
+			// if true, will create a Netlify Edge Function rather
+			// than using standard Node-based functions
 			edge: false,
+
+			// if true, will split your app into multiple functions
+			// instead of creating a single one for the entire app
 			split: false
 		}),
-		// Add fallback for SPA-style routing
+		// Configure prerendering for SPA-style routing and Netlify Forms support
 		prerender: {
 			handleHttpError: ({ path, referrer, message }) => {
 				// Ignore static assets
@@ -23,7 +28,9 @@ const config = {
 					throw message;
 				}
 				return { statusCode: 404, redirect: '/404' };
-			}
+			},
+			// Enable prerendering for Netlify Forms support
+			entries: ['*']
 		}
 	}
 };
