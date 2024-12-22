@@ -7,34 +7,39 @@ const config = {
 
 	kit: {
 		adapter: adapter({
-			// if true, will create a Netlify Edge Function rather
-			// than using standard Node-based functions
 			edge: false,
-
-			// if true, will split your app into multiple functions
-			// instead of creating a single one for the entire app
 			split: false
 		}),
-		// Configure prerendering for SPA-style routing and Netlify Forms support
 		prerender: {
 			handleHttpError: ({ path, referrer, message }) => {
-				// Ignore static assets
 				if (path.startsWith('/images/')) {
 					return;
 				}
 
-				// Otherwise return 404 page
 				if (path === '/404') {
-					throw message;
+					return;
 				}
-				return { statusCode: 404, redirect: '/404' };
+
+				return { status: 404 };
 			},
-			// Enable prerendering for Netlify Forms support
-			entries: ['*']
+			entries: ['*'],
+			crawl: true,
+			concurrency: 1
 		},
-		// Ensure homepage is properly rendered
 		paths: {
-			base: ''
+			base: '',
+			relative: true
+		},
+		trailingSlash: 'always',
+		version: {
+			name: 'v1',
+			pollInterval: 0
+		},
+		serviceWorker: {
+			register: true
+		},
+		csrf: {
+			checkOrigin: true
 		}
 	}
 };
