@@ -36,8 +36,8 @@
       loading = true;
       allNews = await fetchGloryNews();
     } catch (e) {
-      error = 'Failed to load news';
-      console.error(e);
+      error = e instanceof Error ? e.message : 'Failed to load news';
+      console.error('Error in onMount:', e);
     } finally {
       loading = false;
     }
@@ -48,8 +48,9 @@
       loading = true;
       allNews = await fetchGloryNews();
       error = '';
-    } catch {
-      error = 'Failed to load news';
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Failed to load news';
+      console.error('Error in handleRetry:', e);
     } finally {
       loading = false;
     }
