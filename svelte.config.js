@@ -7,39 +7,51 @@ const config = {
 
 	kit: {
 		adapter: adapter({
-			edge: false,
-			split: false
+			edge: true, // Enable edge functions for better performance
+			split: true // Split the app into smaller chunks
 		}),
 		prerender: {
 			handleHttpError: ({ path, referrer, message }) => {
-				if (path.startsWith('/images/')) {
+				// Handle more error cases
+				if (path.startsWith('/images/') || path.startsWith('/assets/')) {
 					return;
 				}
 
-				if (path === '/404') {
+				if (path === '/404' || path === '/500') {
 					return;
 				}
 
+				console.error(`Prerender error: ${message}`);
 				return { status: 404 };
 			},
 			entries: ['*'],
 			crawl: true,
-			concurrency: 1
+			concurrency: 4 // Increase concurrency for faster builds
 		},
 		paths: {
-			base: '',
+			base: process.env.BASE_PATH || '', // Support configurable base path
 			relative: true
 		},
-		trailingSlash: 'always',
 		version: {
-			name: 'v1',
-			pollInterval: 0
+			name: process.env.VERSION || 'v1',
+			pollInterval: 60000 // Check for updates every minute
 		},
 		serviceWorker: {
-			register: true
+			register: true,
+			files: (filepath) => !/\.DS_Store/.test(filepath) // Exclude system files
 		},
 		csrf: {
 			checkOrigin: true
+		},
+		csp: {
+			mode: 'auto',
+			directives: {
+				'script-src': ['self']
+			}
+		},
+		alias: {
+			$components: 'src/components',
+			$lib: 'src/lib'
 		}
 	}
 };
