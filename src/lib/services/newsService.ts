@@ -4,7 +4,7 @@ const GLORY_BLOG_API = 'https://www.perthglory.com.au/wp-json/wp/v2';
 
 export async function fetchGloryNews(): Promise<NewsItem[]> {
     try {
-        const response = await fetch(`${GLORY_BLOG_API}/posts?_embed=true&per_page=24&orderby=date&order=desc`);
+        const response = await fetch(`${GLORY_BLOG_API}/posts?_embed=true&per_page=36&orderby=date&order=desc`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);

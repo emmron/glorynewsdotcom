@@ -9,7 +9,7 @@
   let loading = true;
   let error = '';
   let currentPage = 1;
-  const itemsPerPage = 12;
+  const itemsPerPage = 18;
   let searchQuery = '';
   let selectedCategory: string | null = null;
 
