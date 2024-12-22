@@ -4,7 +4,7 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
-		"preview": "vite preview",
+		"preview": "vite preview", 
 		"sync": "npx svelte-kit sync",
 		"package": "npx svelte-kit sync && svelte-package && publint",
 		"prepublishOnly": "npm run package",
@@ -41,6 +41,7 @@
 		"@tailwindcss/typography": "^0.5.10",
 		"@tsconfig/svelte": "^5.0.0",
 		"@types/node": "^20.0.0",
+		"esbuild": "^0.19.0",
 		"publint": "^0.2.0",
 		"rollup": "^4.9.0",
 		"svelte": "^5.0.0",
