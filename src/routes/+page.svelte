@@ -128,6 +128,7 @@
     background-color: #f8f9fa;
     min-height: 100vh;
     overflow-x: hidden;
+    font-family: system-ui, -apple-system, sans-serif;
   }
 
   :global(::selection) {
@@ -158,6 +159,7 @@
     background: linear-gradient(180deg, #faf5ff 0%, #ffffff 100%);
     min-height: 100vh;
     padding: 4rem 0;
+    perspective: 1000px;
   }
 
   .news__grid {
@@ -170,6 +172,7 @@
     padding: 2rem;
     animation: fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
+    transform-style: preserve-3d;
   }
 
   .news__grid::before {
@@ -179,19 +182,25 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: radial-gradient(circle at center, rgba(147, 51, 234, 0.1) 0%, transparent 70%);
+    background: radial-gradient(circle at center, rgba(147, 51, 234, 0.15) 0%, transparent 70%);
     pointer-events: none;
     filter: blur(60px);
+    animation: pulse 4s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.8; }
   }
 
   @keyframes fadeIn {
     from {
       opacity: 0;
-      transform: translateY(20px);
+      transform: translateY(20px) rotateX(10deg);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
+      transform: translateY(0) rotateX(0);
     }
   }
 
@@ -235,22 +244,23 @@
     box-shadow: 
       0 4px 6px -1px rgba(0, 0, 0, 0.08), 
       0 2px 4px -1px rgba(0, 0, 0, 0.04),
-      0 0 0 1px rgba(147, 51, 234, 0.1);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      0 0 0 1px rgba(147, 51, 234, 0.1),
+      0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
     overflow: hidden;
     width: 100%;
     max-width: 460px;
     position: relative;
     backdrop-filter: blur(10px);
     will-change: transform;
+    transform: translateZ(0);
   }
 
   .news-card:hover {
-    transform: translateY(-12px) scale(1.02);
+    transform: translateY(-12px) scale(1.02) translateZ(30px);
     box-shadow: 
-      0 25px 30px -8px rgba(0, 0, 0, 0.12),
-      0 15px 15px -6px rgba(0, 0, 0, 0.06),
-      0 0 0 2px rgba(147, 51, 234, 0.15);
+      0 25px 50px -12px rgba(0, 0, 0, 0.25),
+      0 0 0 2px rgba(147, 51, 234, 0.2);
   }
 
   .news-card::after {
@@ -281,13 +291,13 @@
     height: 100%;
     object-fit: cover;
     transform: scale(1);
-    transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
     will-change: transform;
     loading: lazy;
   }
 
   .news-card:hover .news-card__image {
-    transform: scale(1.15);
+    transform: scale(1.15) rotate(-1deg);
   }
 
   .news-card__content {
@@ -298,7 +308,7 @@
     gap: 1.75rem;
     position: relative;
     z-index: 1;
-    background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.9) 100%);
+    background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.95) 100%);
   }
 
   .news-card__meta {
@@ -325,7 +335,7 @@
     background-size: 0% 2px;
     background-position: 0 100%;
     background-repeat: no-repeat;
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   .news-card__link:hover {
@@ -350,7 +360,7 @@
     margin-top: auto;
     padding: 1.25rem 0;
     font-size: 1rem;
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     border-top: 1px solid rgba(147, 51, 234, 0.12);
     letter-spacing: 0.01em;
   }
@@ -358,6 +368,7 @@
   .news-card__read-more:hover {
     color: #5b21b6;
     padding-left: 0.75rem;
+    text-shadow: 0 0 20px rgba(147, 51, 234, 0.3);
   }
 
   .news-card__icon {
@@ -365,7 +376,7 @@
     height: 1.25rem;
     margin-left: 0.5rem;
     transform: translateX(0);
-    transition: transform 0.3s ease;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   .news-card__read-more:hover .news-card__icon {
@@ -380,18 +391,20 @@
     font-size: 0.875rem;
     font-weight: 600;
     letter-spacing: 0.02em;
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   .badge-purple {
     background: linear-gradient(135deg, rgba(109, 40, 217, 0.1), rgba(147, 51, 234, 0.1));
     color: #6d28d9;
     border: 1px solid rgba(147, 51, 234, 0.25);
+    box-shadow: 0 2px 4px rgba(147, 51, 234, 0.1);
   }
 
   .badge:hover {
     background: linear-gradient(135deg, rgba(109, 40, 217, 0.15), rgba(147, 51, 234, 0.15));
-    transform: scale(1.05);
+    transform: scale(1.05) translateY(-2px);
+    box-shadow: 0 4px 8px rgba(147, 51, 234, 0.2);
   }
 
   .line-clamp-2 {
