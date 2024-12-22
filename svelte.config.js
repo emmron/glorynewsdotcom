@@ -31,6 +31,10 @@ const config = {
 			},
 			// Enable prerendering for Netlify Forms support
 			entries: ['*']
+		},
+		// Ensure homepage is properly rendered
+		paths: {
+			base: ''
 		}
 	}
 };
