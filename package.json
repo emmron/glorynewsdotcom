@@ -1,51 +1,25 @@
 {
 	"name": "my-app",
 	"version": "0.0.1",
+	"private": true,
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
-		"sync": "npx svelte-kit sync",
-		"package": "npx svelte-kit sync && svelte-package && publint",
-		"prepublishOnly": "npm run package",
-		"check": "npx svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "npx svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"clean": "rm -rf package-lock.json node_modules && npm install",
-		"reset": "npm run clean"
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"clean": "rm -rf node_modules package-lock.json .svelte-kit && npm install"
 	},
-	"files": [
-		"dist",
-		"!dist/**/*.test.*",
-		"!dist/**/*.spec.*"
-	],
-	"sideEffects": [
-		"**/*.css"
-	],
-	"svelte": "./dist/index.js",
-	"types": "./dist/index.d.ts",
 	"type": "module",
-	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"svelte": "./dist/index.js"
-		}
-	},
-	"peerDependencies": {
-		"svelte": "^4.0.0"
+	"dependencies": {
+		"@sveltejs/kit": "^2.0.0",
+		"svelte": "^4.2.8"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-netlify": "^4.1.0",
-		"@sveltejs/kit": "^2.0.0",
-		"@sveltejs/package": "^2.0.0",
 		"@sveltejs/vite-plugin-svelte": "^3.0.0",
-		"@tailwindcss/line-clamp": "^0.4.4",
-		"@tailwindcss/typography": "^0.5.10",
 		"@tsconfig/svelte": "^5.0.2",
 		"@types/node": "^20.10.4",
-		"esbuild": "^0.19.8",
-		"publint": "^0.2.0",
-		"rollup": "^4.6.1",
-		"svelte": "^4.2.8",
 		"svelte-check": "^3.6.2",
 		"typescript": "^5.3.3",
 		"vite": "^5.0.0"
