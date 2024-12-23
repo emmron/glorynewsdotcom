@@ -2,7 +2,8 @@
   import { onMount } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import { fetchGloryNews } from '$lib/services/newsService';
-  import type { NewsItem } from '$lib/types';
+  import { fetchALeagueLadder } from '$lib/services/ladderService';
+  import type { NewsItem, LadderEntry } from '$lib/types';
 
   let allNews: NewsItem[] = [];
   let displayedNews: NewsItem[] = [];
@@ -12,6 +13,9 @@
   const itemsPerPage = 18;
   let searchQuery = '';
   let selectedCategory: string | null = null;
+  let ladder: LadderEntry[] = [];
+  let ladderError = '';
+  let ladderLoading = true;
 
   $: filteredNews = allNews.filter(news => {
     const matchesSearch = searchQuery === '' || 
@@ -34,12 +38,22 @@
   onMount(async () => {
     try {
       loading = true;
-      allNews = await fetchGloryNews();
+      const [newsData, ladderData] = await Promise.all([
+        fetchGloryNews(),
+        fetchALeagueLadder()
+      ]);
+      
+      allNews = newsData;
+      ladder = ladderData;
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to load news';
+      if (e instanceof Error) {
+        error = 'Failed to load news';
+        ladderError = 'Failed to load ladder';
+      }
       console.error('Error in onMount:', e);
     } finally {
       loading = false;
+      ladderLoading = false;
     }
   });
 
@@ -116,98 +130,145 @@
       </div>
     </div>
     
-    <section class="news__section max-w-7xl mx-auto">
-      <div class="news__content bg-white rounded-2xl shadow-sm p-8">
-        {#if loading}
-          <div class="news__loader flex flex-col justify-center items-center h-64" in:fade>
-            <div class="news__spinner animate-spin rounded-full h-12 w-12 border-4 border-purple-200 border-t-purple-600"></div>
-            <p class="mt-4 text-purple-600 font-medium">Loading latest news...</p>
-          </div>
-        {:else if error}
-          <div class="news__error text-center bg-red-50 text-red-600 py-8 rounded-lg shadow-sm" in:fade>
-            <svg class="w-12 h-12 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-            </svg>
-            <p class="text-lg font-medium mb-2">{error}</p>
-            <button 
-              class="mt-4 px-6 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-all duration-300"
-              on:click={handleRetry}
-            >
-              Try Again
-            </button>
-          </div>
-        {:else if displayedNews.length === 0}
-          <div class="news__empty text-center bg-gray-50 text-gray-600 py-12 rounded-lg shadow-sm" in:fade>
-            <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2.5 2.5 0 00-2.5-2.5H15"/>
-            </svg>
-            <p class="text-xl font-medium mb-2">No news articles found</p>
-            <p class="text-gray-500">Try adjusting your search or filters</p>
-          </div>
-        {:else}
-          <div class="news__grid">
-            {#each displayedNews as news (news.id)}
-              <article class="news-card" in:fade="{{ duration: 500, delay: 200 }}">
-                <div class="news-card__image-container">
-                  <img 
-                    src={news.imageUrl} 
-                    alt={news.title}
-                    class="news-card__image"
-                    loading="lazy"
-                    on:error={(e) => {
-                      if (e.currentTarget instanceof HTMLImageElement) {
-                        e.currentTarget.src = '/images/placeholder-news.jpg';
-                      }
-                    }}
-                  />
-                  <div class="news-card__overlay"></div>
-                </div>
-                <div class="news-card__content">
-                  <div class="news-card__meta">
-                    <span class="news-card__category badge {news.category.toLowerCase().includes('nsl') ? 'badge-nsl' : 'badge-purple'}">
-                      {news.category}
-                    </span>
-                    <time class="news-card__date text-sm text-gray-500">{news.date}</time>
-                  </div>
-                  
-                  <h3 class="news-card__title">
-                    <a href="/news/{news.id}" class="news-card__link">
-                      {@html news.title}
-                    </a>
-                  </h3>
-                  
-                  <p class="news-card__summary">{news.summary}</p>
-                  
-                  <a 
-                    href="/news/{news.id}"
-                    class="news-card__read-more"
-                  >
-                    Read Full Article
-                    <svg class="news-card__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
-                    </svg>
-                  </a>
-                </div>
-              </article>
-            {/each}
-          </div>
-          
-          {#if hasMorePages()}
-            <div class="news__load-more" in:fade="{{ duration: 300 }}">
-              <button 
-                class="load-more-button"
-                on:click={loadMore}
-              >
-                Load More Articles
-                <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                </svg>
-              </button>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-xl shadow-sm p-6 sticky top-4">
+          <h2 class="text-2xl font-bold text-purple-900 mb-4">A-League Ladder</h2>
+          {#if ladderLoading}
+            <div class="animate-pulse space-y-4">
+              {#each Array(12) as _}
+                <div class="h-8 bg-gray-200 rounded"></div>
+              {/each}
+            </div>
+          {:else if ladderError}
+            <div class="text-red-500 text-center py-4">
+              {ladderError}
+            </div>
+          {:else}
+            <div class="overflow-x-auto">
+              <table class="min-w-full">
+                <thead>
+                  <tr class="text-sm text-gray-600">
+                    <th class="px-2 py-2 text-left">#</th>
+                    <th class="px-2 py-2 text-left">Team</th>
+                    <th class="px-2 py-2 text-center">P</th>
+                    <th class="px-2 py-2 text-center">GD</th>
+                    <th class="px-2 py-2 text-center">Pts</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {#each ladder as entry}
+                    <tr class="text-sm border-t {entry.isGlory ? 'bg-purple-50' : ''} 
+                      hover:bg-gray-50 transition-colors">
+                      <td class="px-2 py-3">{entry.position}</td>
+                      <td class="px-2 py-3 font-medium {entry.isGlory ? 'text-purple-900' : ''}">{entry.teamName}</td>
+                      <td class="px-2 py-3 text-center">{entry.played}</td>
+                      <td class="px-2 py-3 text-center">{entry.goalDifference}</td>
+                      <td class="px-2 py-3 text-center font-bold">{entry.points}</td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
             </div>
           {/if}
-        {/if}
+        </div>
       </div>
-    </section>
+
+      <div class="lg:col-span-2">
+        <section class="news__section max-w-7xl mx-auto">
+          <div class="news__content bg-white rounded-2xl shadow-sm p-8">
+            {#if loading}
+              <div class="news__loader flex flex-col justify-center items-center h-64" in:fade>
+                <div class="news__spinner animate-spin rounded-full h-12 w-12 border-4 border-purple-200 border-t-purple-600"></div>
+                <p class="mt-4 text-purple-600 font-medium">Loading latest news...</p>
+              </div>
+            {:else if error}
+              <div class="news__error text-center bg-red-50 text-red-600 py-8 rounded-lg shadow-sm" in:fade>
+                <svg class="w-12 h-12 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <p class="text-lg font-medium mb-2">{error}</p>
+                <button 
+                  class="mt-4 px-6 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-all duration-300"
+                  on:click={handleRetry}
+                >
+                  Try Again
+                </button>
+              </div>
+            {:else if displayedNews.length === 0}
+              <div class="news__empty text-center bg-gray-50 text-gray-600 py-12 rounded-lg shadow-sm" in:fade>
+                <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2.5 2.5 0 00-2.5-2.5H15"/>
+                </svg>
+                <p class="text-xl font-medium mb-2">No news articles found</p>
+                <p class="text-gray-500">Try adjusting your search or filters</p>
+              </div>
+            {:else}
+              <div class="news__grid">
+                {#each displayedNews as news (news.id)}
+                  <article class="news-card" in:fade="{{ duration: 500, delay: 200 }}">
+                    <div class="news-card__image-container">
+                      <img 
+                        src={news.imageUrl} 
+                        alt={news.title}
+                        class="news-card__image"
+                        loading="lazy"
+                        on:error={(e) => {
+                          if (e.currentTarget instanceof HTMLImageElement) {
+                            e.currentTarget.src = '/images/placeholder-news.jpg';
+                          }
+                        }}
+                      />
+                      <div class="news-card__overlay"></div>
+                    </div>
+                    <div class="news-card__content">
+                      <div class="news-card__meta">
+                        <span class="news-card__category badge {news.category.toLowerCase().includes('nsl') ? 'badge-nsl' : 'badge-purple'}">
+                          {news.category}
+                        </span>
+                        <time class="news-card__date text-sm text-gray-500">{news.date}</time>
+                      </div>
+                      
+                      <h3 class="news-card__title">
+                        <a href="/news/{news.id}" class="news-card__link">
+                          {@html news.title}
+                        </a>
+                      </h3>
+                      
+                      <p class="news-card__summary">{news.summary}</p>
+                      
+                      <a 
+                        href="/news/{news.id}"
+                        class="news-card__read-more"
+                      >
+                        Read Full Article
+                        <svg class="news-card__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                        </svg>
+                      </a>
+                    </div>
+                  </article>
+                {/each}
+              </div>
+              
+              {#if hasMorePages()}
+                <div class="news__load-more" in:fade="{{ duration: 300 }}">
+                  <button 
+                    class="load-more-button"
+                    on:click={loadMore}
+                  >
+                    Load More Articles
+                    <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                  </button>
+                </div>
+              {/if}
+            {/if}
+          </div>
+        </section>
+      </div>
+    </div>
   </main>
 </div>
 
@@ -458,5 +519,10 @@
   @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+  }
+
+  :global(.sticky) {
+    position: sticky;
+    top: 1rem;
   }
 </style>

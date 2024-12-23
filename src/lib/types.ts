@@ -25,4 +25,18 @@ export interface WordPressPost {
     'wp:term'?: Array<Array<{ name: string }>>;
     'wp:featuredmedia'?: Array<{ source_url: string }>;
   };
+}
+
+export interface LadderEntry {
+    position: number;
+    teamName: string;
+    played: number;
+    won: number;
+    drawn: number;
+    lost: number;
+    goalsFor: number;
+    goalsAgainst: number;
+    goalDifference: number;
+    points: number;
+    isGlory: boolean;
 } 
