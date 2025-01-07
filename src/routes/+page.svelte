@@ -11,7 +11,12 @@
   let loading = true;
   let error = '';
   let currentPage = 1;
-  const itemsPerPage = 6;
+  const itemsPerPage = 9;
+
+  function handleImageError(event: Event) {
+    const img = event.currentTarget as HTMLImageElement;
+    img.src = '/images/news-placeholder.jpg';
+  }
 
   onMount(async () => {
     try {
@@ -20,7 +25,7 @@
         fetchGloryNews(),
         fetchALeagueLadder()
       ]);
-      news = newsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      news = newsData;
       ladder = ladderData;
       updateDisplayedNews();
     } catch (e) {
@@ -38,10 +43,8 @@
   }
 
   function loadMore() {
-    if (currentPage * itemsPerPage < news.length) {
-      currentPage++;
-      updateDisplayedNews();
-    }
+    currentPage++;
+    updateDisplayedNews();
   }
 
   $: hasMorePages = news.length > currentPage * itemsPerPage;
@@ -86,9 +89,9 @@
             </button>
           </div>
         {:else}
-          <div class="news__grid grid grid-cols-1 sm:grid-cols-2 gap-8">
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {#each displayedNews as article (article.id)}
-              <article class="news-card bg-white rounded-2xl overflow-hidden shadow-sm border border-purple-100 transition-all duration-300 hover:shadow-md" in:fade>
+              <article class="bg-white rounded-2xl overflow-hidden shadow-sm border border-purple-100 transition-all duration-300 hover:shadow-md" in:fade>
                 <div class="news-card__image-container relative aspect-video bg-purple-50">
                   {#if article.imageUrl}
                     <img 
@@ -96,6 +99,7 @@
                       alt={article.title}
                       class="absolute inset-0 w-full h-full object-cover"
                       loading="lazy"
+                      on:error={handleImageError}
                     />
                     <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                     <div class="absolute bottom-4 left-4">
