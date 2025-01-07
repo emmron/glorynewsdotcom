@@ -2,31 +2,21 @@
   import { page } from '$app/stores';
   import { error } from '@sveltejs/kit';
   
-  const GLORY_BLOG_API = 'https://www.perthglory.com.au/wp-json/wp/v2';
-  
-  interface WordPressPost {
-    title: {
-      rendered: string;
-    };
-    content: {
-      rendered: string;
-    };
+  interface NewsArticle {
+    title: string;
+    content: string;
     date: string;
-    _embedded?: {
-      'wp:term'?: Array<Array<{ name: string }>>;
-      'wp:featuredmedia'?: Array<{ source_url: string }>;
-    };
+    category: string;
+    imageUrl: string;
   }
-
-  let post: WordPressPost | null = null;
+  
+  let article: NewsArticle | null = null;
   let loading = true;
   let errorMessage = '';
 
-  async function loadPost() {
+  async function loadArticle() {
     try {
-      const response = await fetch(
-        `${GLORY_BLOG_API}/posts/${$page.params.id}?_embed=true`
-      );
+      const response = await fetch(`/api/news`);
 
       if (!response.ok) {
         throw error(response.status, {
@@ -34,15 +24,22 @@
         });
       }
 
-      const data = await response.json();
+      const articles = await response.json();
+      const currentArticle = articles.find((a: any) => a.id === $page.params.id);
       
-      if (!data) {
+      if (!currentArticle) {
         throw error(404, {
           message: 'Article not found'
         });
       }
 
-      post = data;
+      article = {
+        title: currentArticle.title,
+        content: currentArticle.content,
+        date: currentArticle.date,
+        category: currentArticle.category,
+        imageUrl: currentArticle.imageUrl
+      };
     } catch (e) {
       console.error('Error fetching article:', e);
       errorMessage = 'Failed to load article. Please try again later.';
@@ -51,12 +48,12 @@
     }
   }
 
-  loadPost();
+  loadArticle();
 </script>
 
 <svelte:head>
-  <title>{post ? post.title.rendered : 'Loading...'} | Perth Glory News</title>
-  <meta name="description" content={post ? `Read about ${post.title.rendered}` : 'Perth Glory news article'} />
+  <title>{article ? article.title : 'Loading...'} | Perth Glory News</title>
+  <meta name="description" content={article ? `Read about ${article.title}` : 'Perth Glory news article'} />
 </svelte:head>
 
 <div class="news-page">
@@ -69,14 +66,14 @@
       <div class="error-message">
         <h2 class="error-message__title">Oops!</h2>
         <p class="error-message__text">{errorMessage}</p>
-        <a href="/news" class="error-message__button">
+        <a href="/" class="error-message__button">
           Return to News
         </a>
       </div>
-    {:else if post}
+    {:else if article}
       <article class="article">
         <div class="article__back-link-container">
-          <a href="/news" class="article__back-link">
+          <a href="/" class="article__back-link">
             <svg 
               class="article__back-icon" 
               fill="none" 
@@ -90,11 +87,11 @@
         </div>
 
         <div class="article__content">
-          {#if post._embedded?.['wp:featuredmedia']?.[0]?.source_url}
+          {#if article.imageUrl}
             <div class="article__image-container">
               <img 
-                src={post._embedded['wp:featuredmedia'][0].source_url}
-                alt={post.title.rendered}
+                src={article.imageUrl}
+                alt={article.title}
                 class="article__image"
                 loading="eager"
               />
@@ -106,27 +103,23 @@
               <header class="article__header">
                 <div class="article__meta">
                   <span class="article__category">
-                    {post._embedded?.['wp:term']?.[0]?.[0]?.name || 'News'}
+                    {article.category}
                   </span>
-                  <time class="article__date" datetime={post.date}>
-                    {new Date(post.date).toLocaleDateString('en-AU', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
+                  <time class="article__date">
+                    {article.date}
                   </time>
                 </div>
                 <h1 class="article__title">
-                  {@html post.title.rendered}
+                  {article.title}
                 </h1>
               </header>
 
               <div class="article__content-body">
-                {@html post.content.rendered}
+                {article.content}
               </div>
 
               <footer class="article__footer">
-                <a href="/news" class="article__view-all">
+                <a href="/" class="article__view-all">
                   View All News
                 </a>
               </footer>
@@ -338,44 +331,6 @@
     line-height: 1.8;
     color: #374151;
     letter-spacing: 0.01em;
-  }
-
-  .article__content-body :global(h1),
-  .article__content-body :global(h2),
-  .article__content-body :global(h3) {
-    color: #111827;
-    margin-top: 2.5rem;
-    margin-bottom: 1.25rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-  }
-
-  .article__content-body :global(p) {
-    margin-bottom: 1.75rem;
-  }
-
-  .article__content-body :global(a) {
-    color: #9333EA;
-    text-decoration: none;
-    border-bottom: 2px solid rgba(147, 51, 234, 0.2);
-    transition: all 0.2s ease;
-  }
-
-  .article__content-body :global(a:hover) {
-    color: #7E22CE;
-    border-bottom-color: #7E22CE;
-  }
-
-  .article__content-body :global(img) {
-    border-radius: 0.75rem;
-    box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.15);
-    max-width: 700px;
-    margin: 2.5rem auto;
-    transition: transform 0.3s ease;
-  }
-
-  .article__content-body :global(img:hover) {
-    transform: scale(1.02);
   }
 
   .article__footer {
