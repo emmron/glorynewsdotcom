@@ -52,12 +52,10 @@ export interface Match {
     competition: string;
     homeTeam: {
         name: string;
-        logo: string;
         score: number;
     };
     awayTeam: {
         name: string;
-        logo: string;
         score: number;
     };
     venue: string;

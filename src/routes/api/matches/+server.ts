@@ -1,82 +1,109 @@
 import type { RequestEvent } from '@sveltejs/kit';
-import type { RecentMatches } from '$lib/types';
+import type { RecentMatches, Match } from '$lib/types';
 
-// In-memory cache
-let matchesCache: RecentMatches | null = null;
-let lastFetchTime = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+type MatchOrNull = Match | null;
+
+async function fetchWPMatches(): Promise<RecentMatches> {
+    const response = await fetch('https://www.perthglory.com.au/wp-json/wp/v2/posts?per_page=10&_embed');
+    if (!response.ok) {
+        throw new Error('Failed to fetch matches');
+    }
+    
+    const posts = await response.json();
+    
+    // Transform WordPress posts into match data
+    const matches = posts.map((post: any) => {
+        const content = post.content.rendered.toLowerCase();
+        const title = post.title.rendered;
+        
+        // Only process posts that look like match reports
+        if (!content.includes('match') && 
+            !content.includes('defeat') && 
+            !content.includes('victory')) {
+            return null;
+        }
+        
+        // Look for score patterns like "2-0" or "3-2"
+        const scorePattern = /(\d+)\s*-\s*(\d+)/;
+        const scoreMatch = content.match(scorePattern);
+        
+        // Look for team names
+        let homeTeam = 'Perth Glory';
+        let awayTeam = '';
+        
+        if (content.includes('wellington phoenix')) {
+            awayTeam = 'Wellington Phoenix';
+        } else if (content.includes('western united')) {
+            awayTeam = 'Western United';
+        } else if (content.includes('macarthur')) {
+            awayTeam = 'Macarthur FC';
+        }
+        
+        // Determine if Glory is home or away
+        const isGloryAway = content.includes('at the hands of') || 
+                           content.includes('away to');
+        
+        if (isGloryAway) {
+            [homeTeam, awayTeam] = [awayTeam, homeTeam];
+        }
+        
+        let homeScore = 0;
+        let awayScore = 0;
+        let isCompleted = false;
+        
+        if (scoreMatch) {
+            homeScore = parseInt(scoreMatch[1]);
+            awayScore = parseInt(scoreMatch[2]);
+            if (isGloryAway) {
+                [homeScore, awayScore] = [awayScore, homeScore];
+            }
+            isCompleted = true;
+        }
+        
+        // Extract venue
+        let venue = 'TBD';
+        if (content.includes('hbf park')) {
+            venue = 'HBF Park';
+        } else if (content.includes('porirua')) {
+            venue = 'Porirua Park';
+        }
+        
+        return {
+            date: post.date,
+            competition: 'A-League Men',
+            homeTeam: {
+                name: homeTeam,
+                score: homeScore
+            },
+            awayTeam: {
+                name: awayTeam,
+                score: awayScore
+            },
+            venue,
+            isCompleted
+        };
+    })
+    .filter((match: MatchOrNull): match is Match => match !== null && match.awayTeam.name !== '')
+    .slice(0, 3);
+
+    return {
+        lastUpdated: new Date().toISOString(),
+        matches
+    };
+}
 
 export async function GET({ request }: RequestEvent) {
     try {
-        const now = Date.now();
+        const matchData = await fetchWPMatches();
         
-        // Check if we need to refresh the cache
-        if (!matchesCache || now - lastFetchTime > CACHE_DURATION) {
-            // Static match data
-            matchesCache = {
-                lastUpdated: new Date().toISOString(),
-                matches: [
-                    {
-                        date: '2024-03-09T09:45:00.000Z',
-                        competition: 'A-League Men',
-                        homeTeam: {
-                            name: 'Perth Glory',
-                            logo: 'https://www.keepup.com.au/images/teams/perth-glory.svg',
-                            score: 2
-                        },
-                        awayTeam: {
-                            name: 'Melbourne Victory',
-                            logo: 'https://www.keepup.com.au/images/teams/melbourne-victory.svg',
-                            score: 1
-                        },
-                        venue: 'HBF Park',
-                        isCompleted: true
-                    },
-                    {
-                        date: '2024-03-02T09:45:00.000Z',
-                        competition: 'A-League Men',
-                        homeTeam: {
-                            name: 'Sydney FC',
-                            logo: 'https://www.keepup.com.au/images/teams/sydney-fc.svg',
-                            score: 2
-                        },
-                        awayTeam: {
-                            name: 'Perth Glory',
-                            logo: 'https://www.keepup.com.au/images/teams/perth-glory.svg',
-                            score: 2
-                        },
-                        venue: 'Allianz Stadium',
-                        isCompleted: true
-                    },
-                    {
-                        date: '2024-02-24T09:45:00.000Z',
-                        competition: 'A-League Men',
-                        homeTeam: {
-                            name: 'Perth Glory',
-                            logo: 'https://www.keepup.com.au/images/teams/perth-glory.svg',
-                            score: 1
-                        },
-                        awayTeam: {
-                            name: 'Melbourne City',
-                            logo: 'https://www.keepup.com.au/images/teams/melbourne-city.svg',
-                            score: 1
-                        },
-                        venue: 'HBF Park',
-                        isCompleted: true
-                    }
-                ]
-            };
-            lastFetchTime = now;
-        }
-        
-        return new Response(JSON.stringify(matchesCache), {
+        return new Response(JSON.stringify(matchData), {
             headers: {
                 'Content-Type': 'application/json',
                 'Cache-Control': 'public, max-age=300' // 5 minutes browser caching
             }
         });
-    } catch (err) {
-        console.error('Error fetching matches:', err);
+    } catch (error) {
+        console.error('Error fetching matches:', error);
         return new Response(JSON.stringify({ error: 'Failed to fetch match data' }), {
             status: 500,
             headers: {

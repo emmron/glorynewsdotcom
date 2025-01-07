@@ -43,8 +43,8 @@
   };
 </script>
 
-<div class="recent-matches bg-white rounded-2xl shadow-sm p-8 mb-8">
-  <h2 class="text-2xl font-bold text-purple-900 mb-6">Recent Matches</h2>
+<div class="recent-matches bg-white rounded-2xl shadow-sm p-6 mb-8">
+  <h2 class="text-xl font-bold text-gray-900 mb-4">Recent Matches</h2>
   
   {#if loading}
     <div class="flex justify-center items-center h-32" in:fade>
@@ -61,46 +61,29 @@
           class="match-card bg-gray-50 rounded-xl p-4 hover:bg-purple-50 transition-colors duration-200"
           in:slide|local={{ duration: 300 }}
         >
-          <div class="flex justify-between items-center">
-            <div class="flex-1">
-              <div class="flex items-center gap-3">
-                <img 
-                  src={match.homeTeam.logo} 
-                  alt={match.homeTeam.name}
-                  class="w-8 h-8 object-contain"
-                />
-                <span class="text-sm font-medium {getResultClass(match.homeTeam.score, match.awayTeam.score, match.homeTeam.name)}">
-                  {match.homeTeam.name}
-                </span>
-              </div>
-              <div class="flex items-center gap-3 mt-2">
-                <img 
-                  src={match.awayTeam.logo} 
-                  alt={match.awayTeam.name}
-                  class="w-8 h-8 object-contain"
-                />
-                <span class="text-sm font-medium {getResultClass(match.homeTeam.score, match.awayTeam.score, match.awayTeam.name)}">
-                  {match.awayTeam.name}
-                </span>
-              </div>
-            </div>
+          <div class="flex flex-col gap-2">
+            <div class="text-sm text-gray-500 mb-1">{formatDate(match.date)}</div>
             
-            <div class="text-center px-6">
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-medium {getResultClass(match.homeTeam.score, match.awayTeam.score, match.homeTeam.name)}">
+                {match.homeTeam.name}
+              </span>
               {#if match.isCompleted}
-                <div class="text-2xl font-bold text-gray-900">
+                <span class="text-lg font-bold text-gray-900 px-3">
                   {match.homeTeam.score} - {match.awayTeam.score}
-                </div>
-                <div class="text-xs text-gray-500 mt-1">FT</div>
+                </span>
               {:else}
-                <div class="text-sm font-medium text-purple-600">
-                  {formatDate(match.date)}
-                </div>
+                <span class="text-sm text-purple-600 font-medium">vs</span>
               {/if}
+              <span class="text-sm font-medium {getResultClass(match.homeTeam.score, match.awayTeam.score, match.awayTeam.name)}">
+                {match.awayTeam.name}
+              </span>
             </div>
             
-            <div class="flex-1 text-right">
-              <div class="text-sm text-gray-500">{match.competition}</div>
-              <div class="text-xs text-gray-400 mt-1">{match.venue}</div>
+            <div class="text-xs text-gray-500 mt-1">
+              <span class="inline-block">{match.competition}</span>
+              <span class="inline-block mx-1">•</span>
+              <span class="inline-block">{match.venue}</span>
             </div>
           </div>
         </div>

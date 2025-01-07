@@ -4,6 +4,7 @@
   import { fetchGloryNews } from '$lib/services/newsService';
   import { fetchALeagueLadder } from '$lib/services/ladderService';
   import type { NewsItem, LeagueLadder } from '$lib/types';
+  import RecentMatches from '$lib/components/RecentMatches.svelte';
 
   let news: NewsItem[] = [];
   let displayedNews: NewsItem[] = [];
@@ -89,35 +90,45 @@
             </button>
           </div>
         {:else}
-          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
             {#each displayedNews as article (article.id)}
-              <article class="bg-white rounded-2xl overflow-hidden shadow-sm border border-purple-100 transition-all duration-300 hover:shadow-md" in:fade>
+              <article 
+                class="bg-white rounded-2xl overflow-hidden shadow-sm border border-purple-100 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] hover:border-purple-200" 
+                in:fade={{ duration: 300, delay: 100 }}
+              >
                 <div class="news-card__image-container relative aspect-video bg-purple-50">
                   {#if article.imageUrl}
                     <img 
                       src={article.imageUrl} 
                       alt={article.title}
-                      class="absolute inset-0 w-full h-full object-cover"
+                      class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                       loading="lazy"
                       on:error={handleImageError}
                     />
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                     <div class="absolute bottom-4 left-4">
-                      <span class="inline-block px-3 py-1 bg-purple-600/90 text-white text-sm font-medium rounded-full">
+                      <span class="inline-block px-3 py-1 bg-purple-600/90 text-white text-sm font-medium rounded-full shadow-sm">
                         {article.category}
                       </span>
                     </div>
                   {:else}
-                    <div class="absolute inset-0 flex items-center justify-center">
-                      <span class="text-purple-600 font-medium">{article.category}</span>
+                    <div class="absolute inset-0 flex items-center justify-center bg-purple-50">
+                      <span class="text-purple-600 font-medium px-4 py-2 rounded-full bg-purple-100">
+                        {article.category}
+                      </span>
                     </div>
                   {/if}
                 </div>
                 <div class="news-card__content p-6">
                   <div class="news-card__meta flex items-center gap-4 mb-3">
-                    <time class="text-sm text-gray-500">{article.date}</time>
+                    <time class="text-sm text-gray-500 flex items-center gap-2">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      {article.date}
+                    </time>
                   </div>
-                  <h2 class="news-card__title text-xl font-bold text-gray-900 mb-3 line-clamp-2">
+                  <h2 class="news-card__title text-xl font-bold text-gray-900 mb-3 line-clamp-2 hover:text-purple-600 transition-colors">
                     <a href="/news/{article.id}" class="hover:text-purple-600 transition-colors">
                       {article.title}
                     </a>
@@ -127,9 +138,12 @@
                   </p>
                   <a 
                     href="/news/{article.id}" 
-                    class="inline-block mt-4 text-purple-600 font-medium hover:text-purple-700 transition-colors"
+                    class="inline-flex items-center gap-2 mt-4 text-purple-600 font-medium hover:text-purple-700 transition-colors group"
                   >
-                    Read More →
+                    Read More 
+                    <svg class="w-4 h-4 transform transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
                   </a>
                 </div>
               </article>
@@ -139,10 +153,13 @@
           {#if hasMorePages}
             <div class="flex justify-center mt-12">
               <button 
-                class="px-8 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                class="px-8 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-300 font-medium shadow-sm hover:shadow-md flex items-center gap-2"
                 on:click={loadMore}
               >
                 Load More News
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
             </div>
           {/if}
@@ -150,7 +167,7 @@
       </section>
 
       <aside class="lg:col-span-1">
-        <div class="bg-white rounded-2xl shadow-sm border border-purple-100 p-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-purple-100 p-6 mb-6">
           <h2 class="text-xl font-bold text-gray-900 mb-4">A-League Ladder</h2>
           {#if ladder}
             <div class="overflow-x-auto">
@@ -196,6 +213,8 @@
             <div class="text-gray-500 text-sm">Loading ladder...</div>
           {/if}
         </div>
+        
+        <RecentMatches />
       </aside>
     </div>
   </main>
