@@ -1,0 +1,75 @@
+{
+    "lastUpdated": "2024-01-15T12:00:00.000Z",
+    "matches": [
+        {
+            "date": "2024-02-02T09:45:00.000Z",
+            "competition": "A-League Men",
+            "homeTeam": {
+                "name": "Perth Glory",
+                "score": 0
+            },
+            "awayTeam": {
+                "name": "Brisbane Roar",
+                "score": 0
+            },
+            "venue": "HBF Park",
+            "isCompleted": false
+        },
+        {
+            "date": "2024-01-26T09:45:00.000Z",
+            "competition": "A-League Men",
+            "homeTeam": {
+                "name": "Perth Glory",
+                "score": 0
+            },
+            "awayTeam": {
+                "name": "Melbourne City FC",
+                "score": 0
+            },
+            "venue": "HBF Park, Perth",
+            "isCompleted": false
+        },
+        {
+            "date": "2024-01-20T09:45:00.000Z",
+            "competition": "A-League Men",
+            "homeTeam": {
+                "name": "Adelaide United FC",
+                "score": 0
+            },
+            "awayTeam": {
+                "name": "Perth Glory",
+                "score": 0
+            },
+            "venue": "Coopers Stadium, Adelaide",
+            "isCompleted": false
+        },
+        {
+            "date": "2024-01-14T08:45:00.000Z",
+            "competition": "A-League Men",
+            "homeTeam": {
+                "name": "Perth Glory",
+                "score": 1
+            },
+            "awayTeam": {
+                "name": "Western Sydney Wanderers FC",
+                "score": 3
+            },
+            "venue": "HBF Park, Perth",
+            "isCompleted": true
+        },
+        {
+            "date": "2024-01-08T08:45:00.000Z",
+            "competition": "A-League Men",
+            "homeTeam": {
+                "name": "Sydney FC",
+                "score": 2
+            },
+            "awayTeam": {
+                "name": "Perth Glory",
+                "score": 1
+            },
+            "venue": "Allianz Stadium, Sydney",
+            "isCompleted": true
+        }
+    ]
+} 

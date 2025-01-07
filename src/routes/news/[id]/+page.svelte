@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import { page } from '$app/stores';
-  import { fetchGloryNews } from '$lib/services/newsService';
+  import { fetchNewsArticle } from '$lib/services/newsService';
   import type { NewsItem } from '$lib/types';
 
   let article: NewsItem | null = null;
@@ -12,8 +12,7 @@
   onMount(async () => {
     try {
       loading = true;
-      const articles = await fetchGloryNews();
-      article = articles.find(a => a.id === $page.params.id) || null;
+      article = await fetchNewsArticle($page.params.id);
       
       if (!article) {
         error = 'Article not found';
@@ -25,6 +24,11 @@
       loading = false;
     }
   });
+
+  function handleImageError(event: Event) {
+    const img = event.currentTarget as HTMLImageElement;
+    img.src = 'https://www.perthglory.com.au/sites/per/files/styles/image_1200x/public/2023-11/231104%20PERvWUN%20MG%20%2813%20of%2082%29.jpg';
+  }
 </script>
 
 <svelte:head>
@@ -39,12 +43,12 @@
 <div class="article-page">
   <main class="article-page__main container mx-auto px-4 sm:px-6 lg:px-8 py-12">
     {#if loading}
-      <div class="article-page__loader flex flex-col justify-center items-center h-64" in:fade>
+      <div class="article-page__loader flex flex-col justify-center items-center h-64" in:fade={{ duration: 200 }}>
         <div class="article-page__spinner animate-spin rounded-full h-12 w-12 border-4 border-purple-200 border-t-purple-600"></div>
         <p class="mt-4 text-purple-600 font-medium">Loading article...</p>
       </div>
     {:else if error}
-      <div class="article-page__error text-center bg-red-50 text-red-600 py-8 rounded-lg shadow-sm" in:fade>
+      <div class="article-page__error text-center bg-red-50 text-red-600 py-8 rounded-lg shadow-sm" in:fly={{ y: 20, duration: 400 }}>
         <svg class="w-12 h-12 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
         </svg>
@@ -57,7 +61,7 @@
         </a>
       </div>
     {:else if article}
-      <article class="article-page__content max-w-4xl mx-auto" in:fly="{{ y: 50, duration: 1000 }}">
+      <article class="article-page__content max-w-4xl mx-auto" in:fly={{ y: 50, duration: 1000 }}>
         <header class="article-page__header mb-8">
           <div class="flex items-center gap-4 mb-4">
             <a 
@@ -81,11 +85,12 @@
         </header>
 
         {#if article.imageUrl}
-          <div class="article-page__image-container relative aspect-video mb-8 rounded-2xl overflow-hidden">
+          <div class="article-page__image-container relative aspect-video mb-8 rounded-2xl overflow-hidden bg-purple-50">
             <img 
               src={article.imageUrl} 
               alt={article.title}
               class="absolute inset-0 w-full h-full object-cover"
+              on:error={handleImageError}
             />
           </div>
         {/if}

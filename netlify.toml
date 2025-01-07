@@ -3,14 +3,37 @@
   publish = ".svelte-kit/netlify"
 
 [build.environment]
-  NODE_VERSION = "20.18.1"
+  NODE_VERSION = "20.10.0"
   NPM_FLAGS = "--legacy-peer-deps"
 
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Frame-Options = "DENY"
-    X-XSS-Protection = "1; mode=block"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    Content-Security-Policy = "default-src 'self' 'unsafe-inline' 'unsafe-eval' *.perthglory.com.au; img-src 'self' data: *.perthglory.com.au; media-src 'self' *.perthglory.com.au;"
+    # Security headers
+    X-Frame-Options = "DENY"  # Prevent clickjacking
+    X-XSS-Protection = "1; mode=block"  # Enable XSS filtering
+    X-Content-Type-Options = "nosniff"  # Prevent MIME type sniffing
+    Referrer-Policy = "strict-origin-when-cross-origin"  # Control referrer information
+    
+    # Content Security Policy - Allow Perth Glory domain and required functionality
+    Content-Security-Policy = """
+      default-src 'self' 'unsafe-inline' 'unsafe-eval' *.perthglory.com.au;
+      img-src 'self' data: *.perthglory.com.au;
+      media-src 'self' *.perthglory.com.au;
+      connect-src 'self' *.perthglory.com.au;
+      """
+    
+    # Restrict browser features
+    Permissions-Policy = """
+      accelerometer=(),
+      camera=(),
+      geolocation=(),
+      gyroscope=(),
+      magnetometer=(),
+      microphone=(),
+      payment=(),
+      usb=()
+      """
+    
+    # HSTS - Force HTTPS
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"</edit>

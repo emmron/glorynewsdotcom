@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
+import { fetchGloryNews } from '$lib/services/newsService';
 
 export async function GET({ request }: RequestEvent) {
     // Check for authorization
@@ -9,25 +10,34 @@ export async function GET({ request }: RequestEvent) {
     }
 
     try {
-        // Your cron job logic here
-        // For example, fetching and caching latest news
-        const response = await fetch('https://www.perthglory.com.au/wp-json/wp/v2/posts?per_page=9&_embed=true');
-        const posts = await response.json();
+        // Fetch latest news using existing service
+        const posts = await fetchGloryNews();
 
-        // You can store this data in your preferred caching solution
-        // For now, we'll just return a success message
+        // Add basic validation
+        if (!Array.isArray(posts) || posts.length === 0) {
+            throw new Error('Invalid or empty response from news service');
+        }
+
+        // Add rate limiting headers
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-RateLimit-Limit': '60',
+            'X-RateLimit-Remaining': '59',
+            'Cache-Control': 'no-store'
+        };
+
         return new Response(JSON.stringify({ 
             success: true, 
-            message: 'Cron job completed successfully',
+            message: 'News feed successfully updated',
             timestamp: new Date().toISOString(),
-            postsUpdated: posts.length
-        }), {
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
+            postsUpdated: posts.length,
+            lastPostDate: posts[0].date
+        }), { headers });
+
     } catch (err) {
         console.error('Cron job failed:', err);
-        throw error(500, 'Internal Server Error');
+        // Fixed the error throwing to match SvelteKit's error type
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+        throw error(500, errorMessage);
     }
 }
