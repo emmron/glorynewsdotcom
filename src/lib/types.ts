@@ -25,4 +25,46 @@ export interface WordPressPost {
     'wp:term'?: Array<Array<{ name: string }>>;
     'wp:featuredmedia'?: Array<{ source_url: string }>;
   };
+}
+
+export interface TeamStats {
+    position: number;
+    teamName: string;
+    played: number;
+    won: number;
+    drawn: number;
+    lost: number;
+    goalsFor: number;
+    goalsAgainst: number;
+    goalDifference: number;
+    points: number;
+    form: string[];
+    logo: string;
+}
+
+export interface LeagueLadder {
+    lastUpdated: string;
+    teams: TeamStats[];
+}
+
+export interface Match {
+    date: string;
+    competition: string;
+    homeTeam: {
+        name: string;
+        logo: string;
+        score: number;
+    };
+    awayTeam: {
+        name: string;
+        logo: string;
+        score: number;
+    };
+    venue: string;
+    isCompleted: boolean;
+}
+
+export interface RecentMatches {
+    lastUpdated: string;
+    matches: Match[];
 } 
