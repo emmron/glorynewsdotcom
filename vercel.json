@@ -51,11 +51,5 @@
             }
         ]
     },
-    "regions": ["syd1"],
-    "functions": {
-        "api/cron/fetch-news": {
-            "memory": 1024,
-            "maxDuration": 60
-        }
-    }
+    "regions": ["syd1"]
 }
