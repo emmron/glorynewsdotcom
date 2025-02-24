@@ -6,35 +6,106 @@ globs: ["src/lib/news-fetching.ts", "src/routes/api/news/*"]
 # News Fetching Rules
 
 ## Data Sources
-- Perth Glory Official Website
-- Keep Up
-- Football Australia
-- Social Media Feeds
+### Primary Sources
+- Perth Glory Official Website (https://www.perthglory.com.au)
+- Keep Up (https://keepup.com.au)
+- Football Australia (https://www.footballaustralia.com.au)
 
-## Fetching Guidelines
-- Implement rate limiting (max 2 requests/10s)
-- Cache responses for 15 minutes
-- Handle network errors gracefully
-- Validate content before storage
-- Respect robots.txt
+### Social Media Sources
+- X/Twitter (@PerthGloryFC)
+- Facebook (Perth Glory FC)
+- Instagram (@perthgloryfc)
+- YouTube (Perth Glory FC)
 
-## Content Structure
-- Title
-- Content
-- Publication date
-- Source URL
-- Author (if available)
-- Featured image
-- Categories/tags
+## API Integration
+### Rate Limiting
+- Maximum 2 requests per 10 seconds per domain
+- Implement exponential backoff for retries
+- Track rate limits in Redis/memory cache
+
+### Authentication
+- Use API keys where required
+- Store credentials securely
+- Rotate keys regularly
+- Use environment variables for secrets
+
+## Content Processing
+### Article Structure
+```typescript
+interface Article {
+  id: string;
+  title: string;
+  content: string;
+  publishDate: Date;
+  sourceUrl: string;
+  author?: string;
+  images: {
+    featured?: string;
+    gallery?: string[];
+  };
+  categories: string[];
+  tags: string[];
+  metadata: {
+    wordCount: number;
+    readingTime: number;
+    isSponsored: boolean;
+  };
+}
+```
+
+### Content Validation
+- Verify source authenticity
+- Check content completeness
+- Validate image availability
+- Ensure proper formatting
+- Filter duplicate content
 
 ## Error Handling
-- Log all errors with timestamps
-- Implement retry logic (max 3 attempts)
-- Return fallback content if all attempts fail
-- Monitor API response times
+### Retry Strategy
+- Maximum 3 retry attempts
+- Exponential backoff (2^n seconds)
+- Log all retry attempts
+- Alert on persistent failures
+
+### Error Logging
+```typescript
+interface ErrorLog {
+  timestamp: Date;
+  source: string;
+  errorType: 'network' | 'parsing' | 'validation';
+  message: string;
+  stackTrace?: string;
+  context: {
+    url?: string;
+    responseCode?: number;
+    payload?: unknown;
+  };
+}
+```
 
 ## Caching Strategy
-- Use server-side caching
-- Implement stale-while-revalidate
-- Clear cache on new content
-- Cache images separately
+### Content Cache
+- Cache duration: 15 minutes
+- Use stale-while-revalidate pattern
+- Implement cache warming
+- Cache invalidation on updates
+
+### Image Cache
+- Separate image CDN cache
+- Cache images for 24 hours
+- Implement progressive loading
+- Optimize image formats
+
+## Performance Monitoring
+### Metrics
+- Response times per source
+- Success/failure rates
+- Cache hit ratios
+- Content freshness
+
+### Alerts
+- Set up alerts for:
+  - High error rates
+  - Slow response times
+  - Cache misses
+  - API quota usage

@@ -1,114 +1,215 @@
 import { parse } from 'node-html-parser';
 import type { Article, NewsArticle, NewsSource } from '$lib/types';
 import { sanitizeContent, extractReadTime, fetchWithTimeout } from './utils';
+import { Redis } from '@upstash/redis';
+import { z } from 'zod';
 
-const NEWS_SOURCES: NewsSource[] = [
-  {
-    name: 'Perth Glory Official',
-    url: 'https://www.perthglory.com.au/news',
-    updateInterval: 15,
-    priority: 'high',
-    selectors: {
-      list: '.news-list article',
-      title: '.article-title',
-      content: '.article-content'
-    }
+// Types from our rules
+export interface Article {
+  id: string;
+  title: string;
+  content: string;
+  publishDate: Date;
+  sourceUrl: string;
+  author?: string;
+  images: {
+    featured?: string;
+    gallery?: string[];
+    thumbnails?: {
+      small: string;
+      medium: string;
+      large: string;
+    };
+  };
+  categories: string[];
+  tags: string[];
+  metadata: {
+    wordCount: number;
+    readingTime: number;
+    isSponsored: boolean;
+    source: 'official' | 'social' | 'partner';
+    priority: 1 | 2 | 3;
+    engagement: {
+      likes?: number;
+      shares?: number;
+      comments?: number;
+    };
+  };
+  related?: {
+    articles: string[];
+    tags: string[];
+  };
+}
+
+// Validation schema using Zod
+export const ArticleSchema = z.object({
+  id: z.string(),
+  title: z.string().min(1),
+  content: z.string().min(1),
+  publishDate: z.date(),
+  sourceUrl: z.string().url(),
+  author: z.string().optional(),
+  images: z.object({
+    featured: z.string().url().optional(),
+    gallery: z.array(z.string().url()).optional(),
+    thumbnails: z.object({
+      small: z.string().url(),
+      medium: z.string().url(),
+      large: z.string().url(),
+    }).optional(),
+  }),
+  categories: z.array(z.string()),
+  tags: z.array(z.string()),
+  metadata: z.object({
+    wordCount: z.number().min(1),
+    readingTime: z.number().min(1),
+    isSponsored: z.boolean(),
+    source: z.enum(['official', 'social', 'partner']),
+    priority: z.number().min(1).max(3),
+    engagement: z.object({
+      likes: z.number().optional(),
+      shares: z.number().optional(),
+      comments: z.number().optional(),
+    }),
+  }),
+  related: z.object({
+    articles: z.array(z.string()),
+    tags: z.array(z.string()),
+  }).optional(),
+});
+
+// Rate limiting configuration
+const RATE_LIMIT_CONFIG = {
+  maxRequests: 2,
+  windowMs: 10000, // 10 seconds
+} as const;
+
+// Cache configuration
+const CACHE_CONFIG = {
+  news: {
+    maxAge: 900, // 15 minutes
+    staleWhileRevalidate: 300, // 5 minutes
   },
-  {
-    name: 'Keep Up',
-    url: 'https://keepup.com.au/clubs/perth-glory',
-    updateInterval: 15,
-    priority: 'medium',
-    selectors: {
-      list: '.news-grid article',
-      title: 'h2',
-      content: '.article-body'
-    }
+  static: {
+    maxAge: 3600, // 1 hour
+    staleWhileRevalidate: 900, // 15 minutes
+  },
+  images: {
+    maxAge: 86400, // 24 hours
+    staleWhileRevalidate: 3600, // 1 hour
+  },
+} as const;
+
+export class NewsFetcher {
+  private redis: Redis;
+  private sources: Map<string, NewsSource>;
+
+  constructor(redisUrl: string, redisToken: string) {
+    this.redis = new Redis({
+      url: redisUrl,
+      token: redisToken,
+    });
+    this.sources = new Map();
+    this.initializeSources();
   }
-];
 
-const RATE_LIMIT = {
-  requests: 2,
-  interval: 10000, // 10 seconds
-  retryAttempts: 3
-};
+  private initializeSources() {
+    // Initialize official sources
+    this.sources.set('perthglory', new PerthGlorySource());
+    this.sources.set('keepup', new KeepUpSource());
+    this.sources.set('footballaus', new FootballAustraliaSource());
 
-async function fetchArticleContent(url: string): Promise<string> {
-  try {
-    const response = await fetchWithTimeout(url);
-    const html = await response.text();
-    const root = parse(html);
-
-    // Remove unwanted elements
-    root.querySelectorAll('script, style, iframe, .ads, .social-share').forEach(el => el.remove());
-
-    // Get the main content
-    const content = root.querySelector('.article-content, .content-main, .article-body')?.innerHTML || '';
-    return sanitizeContent(content);
-  } catch (error) {
-    console.error(`Error fetching article content from ${url}:`, error);
-    return '';
+    // Initialize social media sources
+    this.sources.set('twitter', new TwitterSource());
+    this.sources.set('facebook', new FacebookSource());
+    this.sources.set('instagram', new InstagramSource());
+    this.sources.set('youtube', new YouTubeSource());
   }
-}
 
-async function fetchFromSource(source: NewsSource): Promise<Article[]> {
-  try {
-    const response = await fetch(source.url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch from ${source.name}`);
-    }
+  private async checkRateLimit(source: string): Promise<boolean> {
+    const key = `rate_limit:${source}:${Date.now()}`;
+    const count = await this.redis.incr(key);
 
-    const html = await response.text();
-    const root = parse(html);
-    const articles: Article[] = [];
-
-    const articleElements = root.querySelectorAll(source.selectors.list);
-    
-    for (const element of articleElements) {
-      const titleElement = element.querySelector(source.selectors.title);
-      const title = titleElement?.text?.trim() || '';
-      const url = titleElement?.getAttribute('href') || '';
-      
-      if (!title || !url) continue;
-
-      const content = await fetchArticleContent(url);
-      const readTime = extractReadTime(content);
-
-      articles.push({
-        id: generateSlug(title),
-        title,
-        content,
-        url: new URL(url, source.url).toString(),
-        publishDate: new Date(),
-        source: source.name,
-        imageUrl: element.querySelector('img')?.getAttribute('src') || undefined
-      });
-
-      // Respect rate limiting
-      await new Promise(resolve => setTimeout(resolve, RATE_LIMIT.interval / RATE_LIMIT.requests));
+    if (count === 1) {
+      await this.redis.expire(key, RATE_LIMIT_CONFIG.windowMs / 1000);
     }
 
-    return articles;
-  } catch (error) {
-    console.error(`Error fetching from ${source.name}:`, error);
-    return [];
+    return count <= RATE_LIMIT_CONFIG.maxRequests;
   }
-}
 
-export async function fetchNews(): Promise<Article[]> {
-  const allArticles: Article[] = [];
+  private async cacheGet<T>(key: string): Promise<T | null> {
+    return this.redis.get<T>(key);
+  }
 
-  for (const source of NEWS_SOURCES) {
+  private async cacheSet(key: string, value: any, config: typeof CACHE_CONFIG.news) {
+    await this.redis.set(key, value, {
+      ex: config.maxAge,
+    });
+  }
+
+  public async fetchArticles(source: string): Promise<Article[]> {
     try {
-      const articles = await fetchFromSource(source);
-      allArticles.push(...articles);
+      // Check rate limit
+      if (!(await this.checkRateLimit(source))) {
+        throw new Error(`Rate limit exceeded for source: ${source}`);
+      }
+
+      // Check cache
+      const cacheKey = `articles:${source}`;
+      const cached = await this.cacheGet<Article[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
+      // Fetch from source
+      const newsSource = this.sources.get(source);
+      if (!newsSource) {
+        throw new Error(`Unknown source: ${source}`);
+      }
+
+      const articles = await newsSource.fetch();
+
+      // Validate articles
+      const validatedArticles = articles.map(article => {
+        const result = ArticleSchema.safeParse(article);
+        if (!result.success) {
+          console.error(`Invalid article from ${source}:`, result.error);
+          return null;
+        }
+        return result.data;
+      }).filter((article): article is Article => article !== null);
+
+      // Cache results
+      await this.cacheSet(cacheKey, validatedArticles, CACHE_CONFIG.news);
+
+      return validatedArticles;
     } catch (error) {
-      console.error(`Failed to fetch from ${source.name}:`, error);
+      console.error(`Error fetching from ${source}:`, error);
+      throw error;
     }
   }
 
-  return allArticles;
+  public async fetchAllSources(): Promise<Record<string, Article[]>> {
+    const results: Record<string, Article[]> = {};
+
+    for (const source of this.sources.keys()) {
+      try {
+        results[source] = await this.fetchArticles(source);
+      } catch (error) {
+        console.error(`Error fetching from ${source}:`, error);
+        results[source] = [];
+      }
+    }
+
+    return results;
+  }
 }
+
+// Export singleton instance
+export const newsFetcher = new NewsFetcher(
+  process.env.UPSTASH_REDIS_URL!,
+  process.env.UPSTASH_REDIS_TOKEN!
+);
 
 function generateSlug(title: string): string {
   return title

@@ -11,7 +11,7 @@ const RETRY_DELAY = 1000; // 1 second
 interface WordPressPost {
     id: number;
     title: { rendered: string };
-    excerpt: { rendered: string }; 
+    excerpt: { rendered: string };
     content: { rendered: string };
     date: string;
     _embedded?: {
@@ -26,7 +26,7 @@ interface WordPressPost {
                 }
             }
         }>;
-    };              
+    };
 }
 
 interface CacheData {
@@ -37,34 +37,44 @@ interface CacheData {
 let cachedNews: CacheData | null = null;
 
 const stripHtml = (html: string): string => {
-    return html.replace(/<[^>]+>/g, '');
+    return html.replace(/<[^>]+>/g, '').trim();
 };
 
 const getImageUrl = (post: WordPressPost): string => {
     const media = post._embedded?.['wp:featuredmedia']?.[0];
-    return media?.source_url || 
+    return media?.source_url ||
            media?.media_details?.sizes?.medium?.source_url ||
            '/images/default-news.jpg';
 };
 
 const formatNewsDate = (dateString: string): string => {
     try {
-        return format(new Date(dateString), 'PPpp');
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) {
+            throw new Error('Invalid date');
+        }
+        return format(date, 'PPpp');
     } catch (error) {
         console.error('Error formatting date:', error);
-        return dateString;
+        return new Date().toLocaleString();
     }
 };
 
-const transformWordPressPost = (post: WordPressPost): NewsItem => ({
-    id: post.id.toString(),
-    title: stripHtml(post.title.rendered),
-    content: post.content.rendered,
-    summary: stripHtml(post.excerpt.rendered),
-    date: formatNewsDate(post.date),
-    imageUrl: getImageUrl(post),
-    category: post._embedded?.['wp:term']?.[0]?.[0]?.name || 'News'
-});
+const transformWordPressPost = (post: WordPressPost): NewsItem => {
+    if (!post || typeof post !== 'object') {
+        throw new Error('Invalid post data');
+    }
+
+    return {
+        id: post.id.toString(),
+        title: stripHtml(post.title.rendered),
+        content: post.content.rendered,
+        summary: stripHtml(post.excerpt.rendered),
+        date: formatNewsDate(post.date),
+        imageUrl: getImageUrl(post),
+        category: post._embedded?.['wp:term']?.[0]?.[0]?.name || 'News'
+    };
+};
 
 const getFallbackNews = (): NewsItem[] => {
     console.warn('Using fallback news data');
@@ -81,22 +91,26 @@ const getFallbackNews = (): NewsItem[] => {
 
 async function fetchWithRetry<T>(
     url: string,
-    options: RequestInit = {},
+    options: Record<string, any> = {},
     retries = MAX_RETRIES
 ): Promise<T> {
     let lastError: Error | null = null;
 
     for (let i = 0; i < retries; i++) {
         try {
-            const response = await axios.get(url, {
+            const response = await axios.get<T>(url, {
                 timeout: 5000,
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'GloryNews/1.0'
+                },
                 ...options
             });
             return response.data;
         } catch (error) {
-            lastError = error as Error;
+            lastError = error instanceof Error ? error : new Error('Unknown error occurred');
             if (i < retries - 1) {
-                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (i + 1)));
+                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, i))); // Exponential backoff
             }
         }
     }
@@ -111,55 +125,39 @@ export async function fetchGloryNews(): Promise<NewsItem[]> {
             return cachedNews.data;
         }
 
-        const posts = await fetchWithRetry<WordPressPost[]>(
-            `${API_URL}?_embed&per_page=${POSTS_PER_PAGE}`,
-            {
-                headers: {
-                    'Accept': 'application/json',
-                    'User-Agent': 'GloryNews/1.0'
-                }
-            }
-        );
+        const posts = await fetchWithRetry<WordPressPost[]>(`${API_URL}?_embed&per_page=${POSTS_PER_PAGE}`);
+        const newsItems = posts.map(transformWordPressPost);
 
-        const news = posts.map(transformWordPressPost);
-        
         // Update cache
         cachedNews = {
-            data: news,
+            data: newsItems,
             timestamp: Date.now()
         };
 
-        return news;
+        return newsItems;
     } catch (error) {
         console.error('Error fetching news:', error);
-        
-        // Return cached data if available, even if expired
-        if (cachedNews?.data) {
-            console.warn('Returning expired cached news');
-            return cachedNews.data;
-        }
-
         return getFallbackNews();
     }
 }
 
 export async function fetchNewsArticle(id: string): Promise<NewsItem | null> {
     try {
+        // Check cache first
+        const cachedArticle = cachedNews?.data.find(article => article.id === id);
+        if (cachedArticle && Date.now() - cachedNews!.timestamp < CACHE_DURATION) {
+            return cachedArticle;
+        }
+
         const post = await fetchWithRetry<WordPressPost>(
-            `${API_URL}/${id}?_embed`,
-            {
-                headers: {
-                    'Accept': 'application/json',
-                    'User-Agent': 'GloryNews/1.0'
-                }
-            }
+            `${API_URL}/${id}?_embed`
         );
 
         return transformWordPressPost(post);
     } catch (error) {
         console.error(`Error fetching news article ${id}:`, error);
-        
-        // Check cache for the article
+
+        // Fallback to cache even if expired
         const cachedArticle = cachedNews?.data.find(article => article.id === id);
         if (cachedArticle) {
             console.warn('Returning cached article');
