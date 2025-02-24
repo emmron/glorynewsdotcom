@@ -1,6 +1,7 @@
 ---
 description: Core project configuration and standards for Perth Glory News
 globs: ["src/**/*"]
+alwaysApply: false
 ---
 
 # Perth Glory News Project Rules
