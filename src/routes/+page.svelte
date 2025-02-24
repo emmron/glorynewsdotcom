@@ -17,19 +17,33 @@
   const MAX_RETRIES = 3;
   let refreshInterval: ReturnType<typeof setInterval> | null = null;
   let lastRefreshed: Date | null = null;
-  let isAutoRefreshing = false;
+  let isAutoRefreshing = true;
+  let loadingRefresh = false;
 
-  async function fetchNews(retry = 0): Promise<void> {
+  async function fetchNews(retry = 0, isRefresh = false): Promise<void> {
+    if (isRefresh) {
+      loadingRefresh = true;
+    } else {
+      loading = true;
+    }
+
     try {
-      const response = await fetch('/api/news');
+      const response = await fetch('/api/news', {
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+
       const data: NewsResponse = await response.json();
 
       if (data.success && Array.isArray(data.articles)) {
         articles = data.articles;
         lastRefreshed = new Date();
+        error = null;
       } else {
         throw new Error(data.error || 'Invalid response format');
       }
@@ -41,21 +55,22 @@
       if (retry < MAX_RETRIES) {
         retryCount = retry + 1;
         await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retry)));
-        await fetchNews(retry + 1);
+        await fetchNews(retry + 1, isRefresh);
       }
     } finally {
       loading = false;
+      loadingRefresh = false;
     }
   }
 
   function startAutoRefresh() {
-    // Auto-refresh every 15 minutes (same as the original cron job)
+    // Auto-refresh every 15 minutes
     const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutes
 
     isAutoRefreshing = true;
 
     refreshInterval = setInterval(() => {
-      fetchNews();
+      fetchNews(0, true);
     }, REFRESH_INTERVAL);
   }
 
@@ -107,40 +122,44 @@
   <meta name="description" content="Latest news and updates about Perth Glory Football Club" />
   <meta property="og:title" content="Perth Glory News - Latest Updates" />
   <meta property="og:description" content="Stay up to date with the latest Perth Glory football news and updates" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://perthglory.com.au" />
 </svelte:head>
 
-<div class="min-h-screen bg-gradient-to-b from-purple-50 to-white">
+<div class="min-h-screen bg-gradient-to-b from-purple-100 to-white">
   <main class="container mx-auto px-4 py-8">
-    <h1
-      class="text-5xl font-bold text-purple-900 mb-6 text-center"
-      in:fly={{ y: -20, duration: 500 }}
-    >
-      Perth Glory News
-    </h1>
+    <header class="text-center mb-8" in:fly={{ y: -20, duration: 500 }}>
+      <h1 class="text-4xl md:text-5xl font-bold text-purple-900 mb-3">
+        Perth Glory News
+      </h1>
+      <p class="text-gray-600">Your source for the latest Perth Glory FC updates</p>
+    </header>
 
-    <div class="flex justify-center items-center mb-6 text-sm">
+    <div class="flex flex-wrap justify-center items-center mb-6 text-sm gap-2">
       <button
-        class="px-4 py-2 rounded-md {isAutoRefreshing ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} hover:opacity-90 transition-colors"
+        class="px-4 py-2 rounded-full {isAutoRefreshing ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'} hover:opacity-90 transition-colors"
         on:click={toggleAutoRefresh}
       >
         {isAutoRefreshing ? 'Auto-Refresh: ON' : 'Auto-Refresh: OFF'}
       </button>
       {#if lastRefreshed}
-        <div class="ml-4 text-gray-600">
+        <div class="px-3 py-2 bg-white rounded-full shadow-sm text-gray-600">
           Last updated: {formatRefreshTime(lastRefreshed)}
         </div>
       {/if}
-      {#if !loading}
-        <button
-          class="ml-4 px-4 py-2 bg-purple-100 text-purple-800 rounded-md hover:bg-purple-200 transition-colors"
-          on:click={() => fetchNews()}
-        >
-          Refresh Now
-        </button>
-      {/if}
+      <button
+        class="px-4 py-2 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+        on:click={() => fetchNews(0, true)}
+        disabled={loading || loadingRefresh}
+      >
+        {#if loadingRefresh}
+          <span class="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+        {/if}
+        <span>{loadingRefresh ? 'Refreshing...' : 'Refresh Now'}</span>
+      </button>
     </div>
 
-    {#if loading}
+    {#if loading && !loadingRefresh}
       <div
         class="flex flex-col justify-center items-center min-h-[200px]"
         in:fade
@@ -163,10 +182,14 @@
         </div>
         <button
           class="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-          on:click={() => { loading = true; error = null; fetchNews(); }}
+          on:click={() => { error = null; fetchNews(); }}
         >
           Retry
         </button>
+      </div>
+    {:else if articles.length === 0}
+      <div class="text-center p-8 bg-yellow-50 rounded-lg shadow-sm">
+        <p class="text-yellow-800">No articles found. Please check back later.</p>
       </div>
     {:else}
       <div
@@ -175,8 +198,8 @@
       >
         {#each articles as article, i}
           <article
-            class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300"
-            in:fly={{ y: 20, duration: 300, delay: i * 100 }}
+            class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full"
+            in:fly={{ y: 20, duration: 300, delay: Math.min(i * 100, 600) }}
           >
             {#if article.featuredImage}
               <div class="relative aspect-video overflow-hidden">
@@ -186,11 +209,13 @@
                   class="absolute inset-0 w-full h-full object-cover transform hover:scale-105 transition-transform duration-300"
                   loading={i < 6 ? "eager" : "lazy"}
                   decoding="async"
+                  width="600"
+                  height="338"
                 />
               </div>
             {/if}
 
-            <div class="p-6">
+            <div class="p-6 flex-grow flex flex-col">
               <div class="flex items-center text-sm text-gray-500 mb-2">
                 <time datetime={new Date(article.publishDate).toISOString()}>
                   {formatDate(article.publishDate)}
@@ -201,7 +226,7 @@
                 {/if}
               </div>
 
-              <h2 class="text-xl font-bold text-gray-900 mb-3 line-clamp-2 group">
+              <h2 class="text-xl font-bold text-gray-900 mb-3 line-clamp-2">
                 <a
                   href="/article/{article.slug}"
                   class="hover:text-purple-600 transition-colors"
@@ -210,9 +235,9 @@
                 </a>
               </h2>
 
-              <p class="text-gray-600 mb-4 line-clamp-3">{article.excerpt}</p>
+              <p class="text-gray-600 mb-4 line-clamp-3 flex-grow">{article.excerpt}</p>
 
-              <div class="flex justify-between items-center">
+              <div class="flex justify-between items-center mt-auto pt-3 border-t border-gray-100">
                 <a
                   href="/article/{article.slug}"
                   class="inline-flex items-center text-purple-600 font-medium hover:text-purple-700 transition-colors group"
@@ -237,6 +262,12 @@
       </div>
     {/if}
   </main>
+
+  <footer class="mt-12 py-6 bg-purple-900 text-white text-center text-sm">
+    <div class="container mx-auto px-4">
+      <p>© {new Date().getFullYear()} Perth Glory News | Not affiliated with Perth Glory Football Club</p>
+    </div>
+  </footer>
 </div>
 
 <style lang="postcss">
