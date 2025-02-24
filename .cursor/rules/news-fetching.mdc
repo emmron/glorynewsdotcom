@@ -1,9 +1,40 @@
 ---
-description:
-globs:
+description: Rules for news fetching and content aggregation
+globs: ["src/lib/news-fetching.ts", "src/routes/api/news/*"]
 ---
 
-# Your rule content
+# News Fetching Rules
 
-- You can @ files here
-- You can use markdown but dont have to
+## Data Sources
+- Perth Glory Official Website
+- Keep Up
+- Football Australia
+- Social Media Feeds
+
+## Fetching Guidelines
+- Implement rate limiting (max 2 requests/10s)
+- Cache responses for 15 minutes
+- Handle network errors gracefully
+- Validate content before storage
+- Respect robots.txt
+
+## Content Structure
+- Title
+- Content
+- Publication date
+- Source URL
+- Author (if available)
+- Featured image
+- Categories/tags
+
+## Error Handling
+- Log all errors with timestamps
+- Implement retry logic (max 3 attempts)
+- Return fallback content if all attempts fail
+- Monitor API response times
+
+## Caching Strategy
+- Use server-side caching
+- Implement stale-while-revalidate
+- Clear cache on new content
+- Cache images separately

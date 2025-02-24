@@ -5,23 +5,8 @@ import { vitePreprocess } from '@sveltejs/kit/vite';
 const config = {
 	kit: {
 		adapter: adapter(),
-		env: {
-			dir: process.cwd()
-		},
-		prerender: {
-			handleHttpError: ({ path, referrer, message }) => {
-				if (path.startsWith('/images/')) {
-					return;
-				}
-				if (path === '/404') {
-					throw message;
-				}
-				return { statusCode: 404, redirect: '/404' };
-			},
-			entries: ['*']
-		},
-		paths: {
-			base: ''
+		alias: {
+			$lib: 'src/lib'
 		}
 	},
 	preprocess: vitePreprocess()

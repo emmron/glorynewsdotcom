@@ -65,4 +65,47 @@ export interface Match {
 export interface RecentMatches {
     lastUpdated: string;
     matches: Match[];
-} 
+}
+
+export interface NewsArticle {
+  title: string;
+  slug: string;
+  content: string;
+  excerpt?: string;
+  author?: string;
+  publishDate: Date;
+  categories?: string[];
+  tags?: string[];
+  featuredImage?: string;
+  status: 'draft' | 'published';
+  readTime?: number;
+  lastModified: Date;
+  imageBlurHash?: string;
+  relatedArticles?: string[];
+  sourceUrl: string;
+  sourceName: string;
+  scrapedAt: Date;
+  isScraped: boolean;
+}
+
+export interface NewsSource {
+  name: string;
+  url: string;
+  updateInterval: number;
+  priority: 'high' | 'medium' | 'low';
+  selectors: {
+    list: string;
+    title: string;
+    content: string;
+  };
+}
+
+export interface Article {
+  id: string;
+  title: string;
+  content: string;
+  url: string;
+  publishDate: Date;
+  source: string;
+  imageUrl?: string;
+}
