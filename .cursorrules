@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cursor-rules>
+  <!-- Project Overview -->
+  <project-info>
+    <name>Perth Glory News</name>
+    <description>The official perthglorynews.com website - a dynamic Next.js-based news platform delivering real-time Perth Glory FC coverage, match reports, team news, and fan content.</description>
+    <domain>perthglorynews.com</domain>
+    <tech-stack>
+      <framework>Next.js</framework>
+      <styling>TailwindCSS</styling>
+      <database>MongoDB</database>
+      <features>
+        <feature>Dynamic article fetching</feature>
+        <feature>Real-time updates</feature>
+        <feature>SEO optimization</feature>
+        <feature>Social media integration</feature>
+        <feature>Progressive image loading</feature>
+        <feature>Infinite scroll pagination</feature>
+        <feature>Article preview caching</feature>
+        <feature>Public news aggregation</feature>
+        <feature>Automated content scraping</feature>
+        <feature>Real-time match updates</feature>
+      </features>
+    </tech-stack>
+  </project-info>
+
+  <!-- Code Standards -->
+  <coding-standards>
+    <style>
+      <rule>Use TypeScript for type safety</rule>
+      <rule>Follow React best practices and hooks</rule>
+      <rule>Implement responsive design using Tailwind classes</rule>
+      <rule>Keep components modular and reusable</rule>
+      <rule>Implement proper data fetching patterns</rule>
+      <rule>Use Next.js ISR for article pages</rule>
+      <rule>Implement loading states and skeletons</rule>
+      <rule>Use React Suspense for lazy loading</rule>
+    </style>
+    <naming>
+      <rule>Use PascalCase for components</rule>
+      <rule>Use camelCase for functions and variables</rule>
+      <rule>Use kebab-case for CSS classes and routes</rule>
+      <rule>Use descriptive names for article slugs</rule>
+    </naming>
+    <data-handling>
+      <rule>Implement proper caching strategies</rule>
+      <rule>Use SWR for client-side data fetching</rule>
+      <rule>Handle article pagination efficiently</rule>
+      <rule>Implement proper error boundaries</rule>
+      <rule>Use stale-while-revalidate caching strategy</rule>
+      <rule>Implement optimistic updates for real-time content</rule>
+      <rule>Cache article previews in localStorage</rule>
+      <rule>Implement infinite scroll with virtualization</rule>
+    </data-handling>
+    <performance>
+      <rule>Lazy load images with blur placeholder</rule>
+      <rule>Implement content preloading for linked articles</rule>
+      <rule>Use dynamic imports for heavy components</rule>
+      <rule>Optimize and compress media assets</rule>
+      <rule>Implement service worker for offline access</rule>
+      <rule>Use Redis caching for frequent database queries</rule>
+    </performance>
+  </coding-standards>
+
+  <!-- Project Structure -->
+  <structure>
+    <folders>
+      <folder>/app: Next.js app router components and pages</folder>
+      <folder>/components: Reusable React components</folder>
+      <folder>/lib: Utility functions and shared logic</folder>
+      <folder>/public: Static assets and images</folder>
+      <folder>/styles: Global styles and Tailwind config</folder>
+      <folder>/models: MongoDB schemas and models</folder>
+      <folder>/api: API routes for article fetching</folder>
+      <folder>/types: TypeScript type definitions</folder>
+      <folder>/hooks: Custom React hooks for data fetching</folder>
+      <folder>/cache: Caching utilities and configurations</folder>
+      <folder>/services: External service integrations</folder>
+      <folder>/scrapers: News scraping utilities and configurations</folder>
+      <folder>/aggregators: Content aggregation services</folder>
+      <folder>/feeds: RSS and news feed processors</folder>
+    </folders>
+    <content-structure>
+      <route>/articles: Dynamic article routes</route>
+      <route>/categories: News category pages</route>
+      <route>/tags: Tag-based article filtering</route>
+      <route>/search: Search functionality</route>
+      <route>/api/articles: Article fetching endpoints</route>
+      <route>/api/preview: Article preview endpoints</route>
+      <route>/api/feeds: News feed endpoints</route>
+      <route>/api/scraper: Scraping status endpoints</route>
+    </content-structure>
+  </structure>
+
+  <!-- Content Management -->
+  <content-management>
+    <article-structure>
+      <field>title: String (required)</field>
+      <field>slug: String (unique, required)</field>
+      <field>content: Rich text (required)</field>
+      <field>excerpt: String</field>
+      <field>author: Reference</field>
+      <field>publishDate: Date</field>
+      <field>categories: Array</field>
+      <field>tags: Array</field>
+      <field>featuredImage: String</field>
+      <field>status: enum[draft, published]</field>
+      <field>readTime: Number</field>
+      <field>lastModified: Date</field>
+      <field>imageBlurHash: String</field>
+      <field>relatedArticles: Array</field>
+      <field>sourceUrl: String</field>
+      <field>sourceName: String</field>
+      <field>scrapedAt: Date</field>
+      <field>isScraped: Boolean</field>
+    </article-structure>
+    <scraping-sources>
+      <source>Official Perth Glory website</source>
+      <source>Major Australian sports news websites</source>
+      <source>Public football news RSS feeds</source>
+      <source>Public social media posts</source>
+      <source>Public match statistics</source>
+    </scraping-sources>
+    <scraping-rules>
+      <rule>Respect robots.txt and crawling policies</rule>
+      <rule>Implement proper rate limiting</rule>
+      <rule>Credit original sources</rule>
+      <rule>Store source URLs</rule>
+      <rule>Validate content authenticity</rule>
+      <rule>Remove duplicate content</rule>
+      <rule>Handle content attribution properly</rule>
+    </scraping-rules>
+    <update-frequency>
+      <schedule>Match updates: Real-time during games</schedule>
+      <schedule>News articles: Every 15 minutes</schedule>
+      <schedule>Social media: Every 5 minutes</schedule>
+      <schedule>Statistics: Post-match updates</schedule>
+    </update-frequency>
+    <seo-requirements>
+      <requirement>Implement dynamic meta tags</requirement>
+      <requirement>Generate sitemap.xml</requirement>
+      <requirement>Use proper OpenGraph tags</requirement>
+      <requirement>Include structured data</requirement>
+      <requirement>Implement JSON-LD for articles</requirement>
+      <requirement>Add article publishing metadata</requirement>
+    </seo-requirements>
+    <loading-optimization>
+      <requirement>Implement progressive image loading</requirement>
+      <requirement>Use blur hash placeholders</requirement>
+      <requirement>Implement infinite scroll pagination</requirement>
+      <requirement>Cache article previews</requirement>
+      <requirement>Preload linked articles</requirement>
+      <requirement>Optimize media assets</requirement>
+    </loading-optimization>
+  </content-management>
+
+  <!-- AI Assistant Instructions -->
+  <ai-instructions>
+    <priorities>
+      - Prioritize Perth Glory-specific content with precise and accurate football terminology
+      - Implement mobile-first responsive design using TailwindCSS for optimal user experience across devices
+      - Maintain clean, highly performant code adhering to React best practices and Next.js conventions
+      - Adhere strictly to football news industry standards for content quality and integrity
+      - Structure articles with clear hierarchy and semantic HTML to enhance readability and SEO
+      - Optimize for ultra-fast loading times leveraging Next.js ISR and advanced caching techniques
+      - Ensure real-time updates for match results, breaking news, and live scores to keep fans engaged
+      - Focus intensely on Perth Glory specific content and terminology to cater to the dedicated fanbase
+      - Ensure mobile-first responsive design is not just implemented but perfected for all devices
+      - Maintain clean, performant code that not only meets but exceeds industry standards
+      - Follow football news industry best practices meticulously to uphold the highest journalistic standards
+      - Implement proper news article structuring with attention to detail for enhanced user engagement
+      - Ensure fast loading times for articles are not just met but significantly surpassed for user satisfaction
+    </priorities>
+    <constraints>
+      - Respect copyright when handling news content, ensuring all sources are properly credited
+      - Ensure accessibility compliance to the highest standards, making content available to all users
+      - Optimize for performance, pushing the limits of what's possible with modern web technologies
+      - Follow journalistic standards rigorously, maintaining the integrity and accuracy of all published content
+      - Maintain proper article versioning to track changes and ensure content history is preserved
+    </constraints>
+    <content-guidelines>
+      - Use proper football terminology consistently and accurately to reflect the sport's nuances
+      - Maintain consistent article formatting across all content to provide a cohesive user experience
+      - Include proper image handling with optimized loading and responsive design for all devices
+      - Implement social sharing features that are seamless and encourage user engagement and content spread
+    </content-guidelines>
+  </ai-instructions>
+</cursor-rules> 

@@ -1,8 +1,12 @@
 import type { NewsItem } from '$lib/types';
+import axios from 'axios';
+import { format } from 'date-fns';
 
-const API_URL = 'https://www.keepup.com.au/wp-json/wp/v2/posts';
+const API_URL = 'https://www.perthglory.com.au/wp-json/wp/v2/posts';
 const POSTS_PER_PAGE = 30;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
 
 interface WordPressPost {
     id: number;
@@ -25,74 +29,80 @@ interface WordPressPost {
     };
 }
 
-let cachedNews: { data: NewsItem[]; timestamp: number } | null = null;
+interface CacheData {
+    data: NewsItem[];
+    timestamp: number;
+}
 
-const stripHtml = (html: string): string => html.replace(/<[^>]*>/g, '').trim();
+let cachedNews: CacheData | null = null;
+
+const stripHtml = (html: string): string => {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    return doc.body.textContent || '';
+};
 
 const getImageUrl = (post: WordPressPost): string => {
     const media = post._embedded?.['wp:featuredmedia']?.[0];
     return media?.source_url || 
            media?.media_details?.sizes?.medium?.source_url ||
-           'https://www.perthglory.com.au/sites/per/files/styles/image_1200x/public/2023-11/231104%20PERvWUN%20MG%20%2813%20of%2082%29.jpg';
+           '/images/default-news.jpg';
 };
 
 const formatNewsDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-AU', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    }).format(date);
+    try {
+        return format(new Date(dateString), 'PPpp');
+    } catch (error) {
+        console.error('Error formatting date:', error);
+        return dateString;
+    }
 };
 
 const transformWordPressPost = (post: WordPressPost): NewsItem => ({
     id: post.id.toString(),
     title: stripHtml(post.title.rendered),
-    summary: stripHtml(post.excerpt.rendered),
     content: post.content.rendered,
+    summary: stripHtml(post.excerpt.rendered),
     date: formatNewsDate(post.date),
-    category: post._embedded?.['wp:term']?.[0]?.[0]?.name || 'News',
-    imageUrl: getImageUrl(post)
+    imageUrl: getImageUrl(post),
+    category: post._embedded?.['wp:term']?.[0]?.[0]?.name || 'News'
 });
 
-const getFallbackNews = (): NewsItem[] => [
-    {
-        id: "1",
-        title: "Perth Glory vs Western Sydney Wanderers Match Report",
-        summary: "Glory fall to Wanderers in tight contest at HBF Park.",
-        content: "<p>Perth Glory suffered a 3-1 defeat to Western Sydney Wanderers at HBF Park. Despite a strong start and taking the lead, the visitors proved too strong in the second half.</p>",
+const getFallbackNews = (): NewsItem[] => {
+    console.warn('Using fallback news data');
+    return [{
+        id: 'fallback-1',
+        title: 'Unable to load news',
+        content: 'Please check back later for the latest Perth Glory news.',
+        summary: 'News temporarily unavailable',
         date: formatNewsDate(new Date().toISOString()),
-        category: "Match Report",
-        imageUrl: 'https://www.perthglory.com.au/sites/per/files/styles/image_1200x/public/2023-11/231104%20PERvWUN%20MG%20%2813%20of%2082%29.jpg'
-    },
-    {
-        id: "2",
-        title: "Next Up: Adelaide United Away",
-        summary: "Glory prepare for crucial away fixture against Adelaide United.",
-        content: "<p>Perth Glory head to Coopers Stadium this weekend for an important clash against Adelaide United. The team will be looking to bounce back from recent results.</p>",
-        date: formatNewsDate(new Date().toISOString()),
-        category: "Preview",
-        imageUrl: 'https://www.perthglory.com.au/sites/per/files/styles/image_1200x/public/2023-11/231104%20PERvWUN%20MG%20%2813%20of%2082%29.jpg'
-    }
-];
+        imageUrl: '/images/default-news.jpg',
+        category: 'News'
+    }];
+};
 
-async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 5000): Promise<Response> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-    
-    try {
-        const response = await fetch(url, {
-            ...options,
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        return response;
-    } catch (error) {
-        clearTimeout(timeoutId);
-        throw error;
+async function fetchWithRetry<T>(
+    url: string,
+    options: RequestInit = {},
+    retries = MAX_RETRIES
+): Promise<T> {
+    let lastError: Error | null = null;
+
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await axios.get(url, {
+                timeout: 5000,
+                ...options
+            });
+            return response.data;
+        } catch (error) {
+            lastError = error as Error;
+            if (i < retries - 1) {
+                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (i + 1)));
+            }
+        }
     }
+
+    throw lastError || new Error('Failed to fetch after multiple retries');
 }
 
 export async function fetchGloryNews(): Promise<NewsItem[]> {
@@ -102,42 +112,31 @@ export async function fetchGloryNews(): Promise<NewsItem[]> {
             return cachedNews.data;
         }
 
-        const response = await fetchWithTimeout(
-            `${API_URL}?_embed&per_page=${POSTS_PER_PAGE}&search=perth+glory`,
+        const posts = await fetchWithRetry<WordPressPost[]>(
+            `${API_URL}?_embed&per_page=${POSTS_PER_PAGE}`,
             {
                 headers: {
                     'Accept': 'application/json',
-                    'Cache-Control': 'no-cache'
+                    'User-Agent': 'GloryNews/1.0'
                 }
             }
         );
 
-        if (!response.ok) {
-            throw new Error(`Failed to fetch news: ${response.status} ${response.statusText}`);
-        }
+        const news = posts.map(transformWordPressPost);
         
-        const posts: WordPressPost[] = await response.json();
-        const transformedPosts = posts
-            .filter(post => post.title?.rendered && post.content?.rendered)
-            .map(transformWordPressPost);
-
-        if (transformedPosts.length === 0) {
-            return getFallbackNews();
-        }
-
         // Update cache
         cachedNews = {
-            data: transformedPosts,
+            data: news,
             timestamp: Date.now()
         };
-        
-        return transformedPosts;
+
+        return news;
     } catch (error) {
-        console.error('Error fetching news:', error instanceof Error ? error.message : error);
+        console.error('Error fetching news:', error);
         
-        // If we have stale cache, use it as fallback
-        if (cachedNews?.data?.length) {
-            console.log('Using stale cache as fallback');
+        // Return cached data if available, even if expired
+        if (cachedNews?.data) {
+            console.warn('Returning expired cached news');
             return cachedNews.data;
         }
 
@@ -147,32 +146,27 @@ export async function fetchGloryNews(): Promise<NewsItem[]> {
 
 export async function fetchNewsArticle(id: string): Promise<NewsItem | null> {
     try {
-        // Check cache first
-        if (cachedNews?.data) {
-            const cachedArticle = cachedNews.data.find(article => article.id === id);
-            if (cachedArticle) return cachedArticle;
-        }
-
-        // If not in cache, fetch directly
-        const response = await fetchWithTimeout(
+        const post = await fetchWithRetry<WordPressPost>(
             `${API_URL}/${id}?_embed`,
             {
                 headers: {
                     'Accept': 'application/json',
-                    'Cache-Control': 'no-cache'
+                    'User-Agent': 'GloryNews/1.0'
                 }
             }
         );
 
-        if (!response.ok) {
-            if (response.status === 404) return null;
-            throw new Error(`Failed to fetch article: ${response.status} ${response.statusText}`);
-        }
-
-        const post: WordPressPost = await response.json();
         return transformWordPressPost(post);
     } catch (error) {
-        console.error('Error fetching article:', error instanceof Error ? error.message : error);
+        console.error(`Error fetching news article ${id}:`, error);
+        
+        // Check cache for the article
+        const cachedArticle = cachedNews?.data.find(article => article.id === id);
+        if (cachedArticle) {
+            console.warn('Returning cached article');
+            return cachedArticle;
+        }
+
         return null;
     }
 }

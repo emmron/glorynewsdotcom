@@ -1,6 +1,33 @@
 {
     "crons": [{
-        "path": "/api/cron",
-        "schedule": "0 */6 * * *"
-    }]
+        "path": "/api/cron/fetch-news",
+        "schedule": "*/15 * * * *"
+    }],
+    "env": {
+        "MONGODB_URI": "@mongodb_uri",
+        "CRON_SECRET": "@cron_secret"
+    },
+    "headers": [
+        {
+            "source": "/(.*)",
+            "headers": [
+                {
+                    "key": "X-Content-Type-Options",
+                    "value": "nosniff"
+                },
+                {
+                    "key": "X-Frame-Options",
+                    "value": "DENY"
+                },
+                {
+                    "key": "X-XSS-Protection",
+                    "value": "1; mode=block"
+                },
+                {
+                    "key": "Referrer-Policy",
+                    "value": "strict-origin-when-cross-origin"
+                }
+            ]
+        }
+    ]
 }
