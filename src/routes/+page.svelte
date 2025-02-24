@@ -25,51 +25,6 @@
   });
 </script>
 
-<style>
-  :global(body) {
-    background-color: #faf5ff;
-    min-height: 100vh;
-    font-family: system-ui, -apple-system, sans-serif;
-  }
-
-  :global(.line-clamp-2) {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  :global(.line-clamp-3) {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  :global(img) {
-    transition: transform 0.3s ease;
-  }
-
-  :global(img:hover) {
-    transform: scale(1.05);
-  }
-
-  :global(.animate-spin) {
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-</style>
-
 <svelte:head>
   <title>Perth Glory News - Latest Updates</title>
   <meta name="description" content="Latest news and updates about Perth Glory Football Club" />
@@ -137,6 +92,49 @@
 </div>
 
 <style>
+  :global(body) {
+    background-color: #faf5ff;
+    min-height: 100vh;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+
+  :global(.line-clamp-2) {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :global(.line-clamp-3) {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :global(img) {
+    transition: transform 0.3s ease;
+  }
+
+  :global(img:hover) {
+    transform: scale(1.05);
+  }
+
+  :global(.animate-spin) {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
   :global(body) {
     @apply bg-purple-50;
   }
