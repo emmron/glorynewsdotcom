@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { format } from 'date-fns';
   import type { Article } from '../types/article';
   import { fade, fly } from 'svelte/transition';
@@ -15,6 +15,9 @@
   let error: string | null = null;
   let retryCount = 0;
   const MAX_RETRIES = 3;
+  let refreshInterval: ReturnType<typeof setInterval> | null = null;
+  let lastRefreshed: Date | null = null;
+  let isAutoRefreshing = false;
 
   async function fetchNews(retry = 0): Promise<void> {
     try {
@@ -26,6 +29,7 @@
 
       if (data.success && Array.isArray(data.articles)) {
         articles = data.articles;
+        lastRefreshed = new Date();
       } else {
         throw new Error(data.error || 'Invalid response format');
       }
@@ -44,8 +48,40 @@
     }
   }
 
+  function startAutoRefresh() {
+    // Auto-refresh every 15 minutes (same as the original cron job)
+    const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutes
+
+    isAutoRefreshing = true;
+
+    refreshInterval = setInterval(() => {
+      fetchNews();
+    }, REFRESH_INTERVAL);
+  }
+
+  function stopAutoRefresh() {
+    if (refreshInterval) {
+      clearInterval(refreshInterval);
+      refreshInterval = null;
+    }
+    isAutoRefreshing = false;
+  }
+
+  function toggleAutoRefresh() {
+    if (isAutoRefreshing) {
+      stopAutoRefresh();
+    } else {
+      startAutoRefresh();
+    }
+  }
+
   onMount(() => {
     fetchNews();
+    startAutoRefresh();
+  });
+
+  onDestroy(() => {
+    stopAutoRefresh();
   });
 
   function formatDate(date: string | Date): string {
@@ -53,6 +89,15 @@
       return format(new Date(date), 'MMM d, yyyy');
     } catch {
       return 'Date unavailable';
+    }
+  }
+
+  function formatRefreshTime(date: Date | null): string {
+    if (!date) return 'Not yet refreshed';
+    try {
+      return format(date, 'h:mm:ss a');
+    } catch {
+      return 'Unknown';
     }
   }
 </script>
@@ -67,11 +112,33 @@
 <div class="min-h-screen bg-gradient-to-b from-purple-50 to-white">
   <main class="container mx-auto px-4 py-8">
     <h1
-      class="text-5xl font-bold text-purple-900 mb-8 text-center"
+      class="text-5xl font-bold text-purple-900 mb-6 text-center"
       in:fly={{ y: -20, duration: 500 }}
     >
       Perth Glory News
     </h1>
+
+    <div class="flex justify-center items-center mb-6 text-sm">
+      <button
+        class="px-4 py-2 rounded-md {isAutoRefreshing ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} hover:opacity-90 transition-colors"
+        on:click={toggleAutoRefresh}
+      >
+        {isAutoRefreshing ? 'Auto-Refresh: ON' : 'Auto-Refresh: OFF'}
+      </button>
+      {#if lastRefreshed}
+        <div class="ml-4 text-gray-600">
+          Last updated: {formatRefreshTime(lastRefreshed)}
+        </div>
+      {/if}
+      {#if !loading}
+        <button
+          class="ml-4 px-4 py-2 bg-purple-100 text-purple-800 rounded-md hover:bg-purple-200 transition-colors"
+          on:click={() => fetchNews()}
+        >
+          Refresh Now
+        </button>
+      {/if}
+    </div>
 
     {#if loading}
       <div
