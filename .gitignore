@@ -107,3 +107,5 @@ vite.config.ts.timestamp-*
 *.temp
 ~*
 *~
+
+.vercel
