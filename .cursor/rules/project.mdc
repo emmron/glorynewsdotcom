@@ -5,33 +5,63 @@ globs: ["src/**/*"]
 
 # Perth Glory News Project Rules
 
-## Project Structure
-- Use SvelteKit with TypeScript
-- Deploy on Vercel
-- Use Tailwind CSS for styling
-- MongoDB for data storage
+## Project Architecture
+- Next.js with TypeScript for frontend
+- Cloudflare Pages for deployment
+- Tailwind CSS for styling
+- Content management through headless CMS
 
-## Key Directories
-- `/src/lib`: Shared utilities and components
-- `/src/routes`: SvelteKit routes and API endpoints
-- `/src/components`: Reusable Svelte components
-- `/static`: Static assets
+## Directory Structure
+```
+/
+├── app/           # Next.js app directory
+├── components/    # Reusable React components
+├── lib/          # Shared utilities and helpers
+├── public/       # Static assets
+└── styles/       # Global styles and Tailwind config
+```
 
-## Coding Standards
-- Use TypeScript for all .ts/.svelte files
-- Follow SvelteKit conventions for routing
-- Implement proper error handling
-- Use async/await for asynchronous operations
-- Document complex functions with JSDoc
+## Deployment Configuration
+- Use Cloudflare Pages for hosting
+- Configure automatic deployments from main branch
+- Set up preview deployments for PRs
+- Use environment variables for sensitive data
 
-## Performance Guidelines
-- Implement proper caching strategies
-- Optimize images and media assets
-- Use lazy loading where appropriate
-- Keep bundle sizes minimal
+## Development Standards
+### Code Style
+- TypeScript for all components and utilities
+- ESLint + Prettier for code formatting
+- Follow React best practices
+- Use CSS modules or Tailwind for styling
+
+### Performance
+- Implement image optimization
+- Use Next.js built-in performance features
+- Configure proper caching headers
+- Monitor Core Web Vitals
+
+### Security
+- Implement HTTPS everywhere
+- Use secure headers
+- Follow OWASP security guidelines
+- Regular dependency updates
 
 ## Development Workflow
-1. Run `npm install` to install dependencies
-2. Use `npm run dev` for local development
-3. Run `npm run build` before deployment
-4. Use `npm run preview` to test production build
+1. Create feature branch from main
+2. Local development using `npm run dev`
+3. Run tests with `npm test`
+4. Build and preview with `npm run build && npm run start`
+5. Create PR for review
+6. Deploy to production after approval
+
+## CI/CD Pipeline
+- Automated testing on PR
+- Preview deployments for each PR
+- Automatic deployment to staging
+- Manual promotion to production
+
+## Monitoring
+- Set up error tracking
+- Monitor performance metrics
+- Track user analytics
+- Regular security scans

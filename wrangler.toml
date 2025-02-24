@@ -1,0 +1,15 @@
+name = "perthglorynews"
+type = "webpack"
+account_id = "" # Add your Cloudflare account ID here
+workers_dev = true
+
+[site]
+bucket = "./public"
+entry-point = "workers-site"
+
+[env.production]
+name = "perthglorynews-prod"
+route = "perthglorynews.com/*"
+
+[env.staging]
+name = "perthglorynews-staging"
