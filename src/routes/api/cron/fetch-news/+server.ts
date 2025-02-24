@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { fetchNews } from '$lib/news-fetching';
+import { fetchGloryNews } from '$lib/services/newsService';
 import { Redis } from '@upstash/redis';
 
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -23,7 +23,7 @@ export const GET: RequestHandler = async ({ request }) => {
 
   try {
     // Fetch fresh news
-    const articles = await fetchNews();
+    const articles = await fetchGloryNews();
 
     // Store in Redis
     await redis.set('latest_news', articles);

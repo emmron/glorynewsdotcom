@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { fetchNews } from '$lib/news-fetching';
+import { fetchGloryNews } from '$lib/services/newsService';
 import { Redis } from '@upstash/redis';
 
 const REDIS_URL = process.env.UPSTASH_REDIS_URL || '';
@@ -19,7 +19,7 @@ export const GET: RequestHandler = async () => {
 
     // If not in Redis or data is too old, fetch fresh news
     if (!articles || !Array.isArray(articles) || articles.length === 0) {
-      articles = await fetchNews();
+      articles = await fetchGloryNews();
 
       // Store in Redis for future requests
       await redis.set('latest_news', articles);
@@ -38,7 +38,7 @@ export const GET: RequestHandler = async () => {
 
     // Attempt to fetch news directly as fallback
     try {
-      const articles = await fetchNews();
+      const articles = await fetchGloryNews();
       return json({
         success: true,
         articles,
