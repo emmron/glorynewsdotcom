@@ -1,11 +1,11 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { fetchNews } from '$lib/news-fetching';
-import { MongoClient } from 'mongodb';
-import type { Article } from '../../../../types/article';
+import { Redis } from '@upstash/redis';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/perthglorynews';
 const CRON_SECRET = process.env.CRON_SECRET;
+const REDIS_URL = process.env.UPSTASH_REDIS_URL || '';
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_TOKEN || '';
 
 export const GET: RequestHandler = async ({ request }) => {
   // Verify cron secret
@@ -14,42 +14,24 @@ export const GET: RequestHandler = async ({ request }) => {
     return json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const client = new MongoClient(MONGODB_URI);
+  const redis = new Redis({
+    url: REDIS_URL,
+    token: REDIS_TOKEN
+  });
+
   const startTime = Date.now();
 
   try {
     // Fetch fresh news
     const articles = await fetchNews();
 
-    // Connect to MongoDB
-    await client.connect();
-    const db = client.db();
-    const collection = db.collection<Article>('articles');
-
-    // Update or insert new articles
-    const operations = await Promise.all(
-      articles.map(async (article) => {
-        const result = await collection.updateOne(
-          { slug: article.slug },
-          { $set: article },
-          { upsert: true }
-        );
-        return {
-          slug: article.slug,
-          operation: result.upsertedId ? 'inserted' : 'updated'
-        };
-      })
-    );
-
-    // Count operations
-    const stats = operations.reduce((acc, op) => {
-      acc[op.operation]++;
-      return acc;
-    }, { inserted: 0, updated: 0 });
+    // Store in Redis
+    await redis.set('latest_news', articles);
+    await redis.set('news_last_updated', new Date().toISOString());
 
     return json({
       success: true,
-      stats,
+      count: articles.length,
       duration: Date.now() - startTime,
       timestamp: new Date().toISOString()
     });
@@ -60,7 +42,5 @@ export const GET: RequestHandler = async ({ request }) => {
       error: 'Failed to fetch and update news',
       timestamp: new Date().toISOString()
     }, { status: 500 });
-  } finally {
-    await client.close();
   }
-}; 
+};
