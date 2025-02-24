@@ -3,12 +3,13 @@
   <!-- Project Overview -->
   <project-info>
     <name>Perth Glory News</name>
-    <description>The official perthglorynews.com website - a dynamic Next.js-based news platform delivering real-time Perth Glory FC coverage, match reports, team news, and fan content.</description>
+    <description>A web application for delivering the latest news about Perth Glory Football Club</description>
     <domain>perthglorynews.com</domain>
     <tech-stack>
-      <framework>Next.js</framework>
-      <styling>TailwindCSS</styling>
+      <framework>SvelteKit</framework>
+      <language>TypeScript</language>
       <database>MongoDB</database>
+      <styling>Tailwind CSS</styling>
       <features>
         <feature>Dynamic article fetching</feature>
         <feature>Real-time updates</feature>

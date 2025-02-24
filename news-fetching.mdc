@@ -1,0 +1,173 @@
+# News Fetching Documentation
+
+## Overview
+This document outlines the news fetching system for Perth Glory News, detailing the architecture, implementation, and best practices for aggregating and managing football news content.
+
+## Sources
+Our news aggregation system pulls from the following authorized sources:
+- Official Perth Glory website
+- Major Australian sports news websites
+- Public football news RSS feeds
+- Public social media posts
+- Public match statistics
+
+## Article Structure
+Each article in our system follows this structure:
+
+```typescript
+interface Article {
+  title: string;          // Required - Article headline
+  slug: string;           // Required, Unique - URL-friendly identifier
+  content: string;        // Required - Main article content (rich text)
+  excerpt: string;        // Short summary for previews
+  author: string;         // Reference to author
+  publishDate: Date;      // Publication timestamp
+  categories: string[];   // Article categories
+  tags: string[];        // Related tags
+  featuredImage: string; // Main article image URL
+  status: 'draft' | 'published'; // Publication status
+  readTime: number;      // Estimated reading time in minutes
+  lastModified: Date;    // Last update timestamp
+  imageBlurHash: string; // Blur hash for image loading
+  relatedArticles: string[]; // Related article slugs
+  sourceUrl: string;     // Original article source
+  sourceName: string;    // Name of the source
+  scrapedAt: Date;      // Timestamp of scraping
+  isScraped: boolean;    // Whether article was scraped
+}
+```
+
+## Update Frequency
+- Match Updates: Real-time during games
+- News Articles: Every 15 minutes
+- Social Media: Every 5 minutes
+- Statistics: Post-match updates
+
+## Scraping Guidelines
+1. **Legal Compliance**
+   - Respect robots.txt directives
+   - Implement rate limiting
+   - Follow each site's terms of service
+
+2. **Content Attribution**
+   - Credit original sources
+   - Store source URLs
+   - Validate content authenticity
+   - Remove duplicate content
+   - Handle proper attribution
+
+3. **Performance Optimization**
+   - Implement caching strategies
+   - Use stale-while-revalidate pattern
+   - Cache article previews in localStorage
+   - Implement Redis caching for frequent queries
+
+## Content Processing
+1. **Validation**
+   - Check content authenticity
+   - Verify source reliability
+   - Ensure content completeness
+   - Validate required fields
+
+2. **Optimization**
+   - Generate blur hash for images
+   - Create SEO-friendly slugs
+   - Calculate read time
+   - Extract meaningful excerpts
+   - Process and optimize images
+
+3. **SEO Enhancement**
+   - Generate meta tags
+   - Create OpenGraph tags
+   - Implement JSON-LD
+   - Add article publishing metadata
+
+## Error Handling
+1. **Source Unavailability**
+   - Implement retry mechanisms
+   - Log failed attempts
+   - Alert on persistent failures
+   - Fallback to cached content
+
+2. **Content Issues**
+   - Handle missing fields
+   - Process malformed content
+   - Manage duplicate content
+   - Handle rate limiting
+
+## Monitoring
+1. **Performance Metrics**
+   - Scraping success rate
+   - Content freshness
+   - API response times
+   - Cache hit rates
+
+2. **Content Quality**
+   - Duplicate detection
+   - Content completeness
+   - Image availability
+   - Source reliability
+
+## Implementation Details
+
+### API Endpoints
+```typescript
+// Fetch latest news
+GET /api/news
+Response: {
+  success: boolean;
+  articles: Article[];
+  count: number;
+  timestamp: string;
+}
+
+// Fetch specific article
+GET /api/news/:slug
+Response: {
+  success: boolean;
+  article: Article;
+  timestamp: string;
+}
+```
+
+### Caching Strategy
+1. **Browser Level**
+   - Article previews in localStorage
+   - Image blur hashes
+   - Recently viewed articles
+
+2. **Server Level**
+   - Redis caching for frequent queries
+   - Stale-while-revalidate pattern
+   - Content delivery network (CDN)
+
+## Best Practices
+1. **Performance**
+   - Implement proper caching
+   - Use pagination for large datasets
+   - Optimize image loading
+   - Implement content preloading
+
+2. **Reliability**
+   - Handle network failures gracefully
+   - Implement retry mechanisms
+   - Maintain content backups
+   - Monitor source availability
+
+3. **Quality**
+   - Validate content integrity
+   - Check source reliability
+   - Remove duplicate content
+   - Ensure proper attribution
+
+## Security Considerations
+1. **Rate Limiting**
+   - Implement per-source limits
+   - Handle rate limit errors
+   - Use exponential backoff
+
+2. **Content Safety**
+   - Sanitize HTML content
+   - Validate image sources
+   - Check for malicious content
+   - Implement content moderation 
