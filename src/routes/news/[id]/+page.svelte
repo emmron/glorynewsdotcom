@@ -13,7 +13,7 @@
     try {
       loading = true;
       article = await fetchNewsArticle($page.params.id);
-      
+
       if (!article) {
         error = 'Article not found';
       }
@@ -53,7 +53,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
         </svg>
         <p class="text-lg font-medium mb-2">{error}</p>
-        <a 
+        <a
           href="/"
           class="inline-block mt-4 px-6 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-all duration-300"
         >
@@ -64,7 +64,7 @@
       <article class="article-page__content max-w-4xl mx-auto" in:fly={{ y: 50, duration: 1000 }}>
         <header class="article-page__header mb-8">
           <div class="flex items-center gap-4 mb-4">
-            <a 
+            <a
               href="/"
               class="inline-flex items-center text-purple-600 hover:text-purple-700 transition-colors"
             >
@@ -86,8 +86,8 @@
 
         {#if article.imageUrl}
           <div class="article-page__image-container relative aspect-video mb-8 rounded-2xl overflow-hidden bg-purple-50">
-            <img 
-              src={article.imageUrl} 
+            <img
+              src={article.imageUrl}
               alt={article.title}
               class="absolute inset-0 w-full h-full object-cover"
               on:error={handleImageError}
@@ -133,7 +133,7 @@
   }
 
   :global(.prose a) {
-    color: theme(colors.purple.600);
+    color: #9333EA;
     text-decoration: none;
   }
 
