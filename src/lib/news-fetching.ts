@@ -82,7 +82,54 @@ async function fetchArticleContent(url: string): Promise<string> {
 }
 
 export async function fetchNews(): Promise<Article[]> {
-  // Implement news fetching logic here
-  // This is a placeholder implementation
-  return [];
+  const articles: Article[] = [];
+
+  for (const [sourceName, source] of Object.entries(NEWS_SOURCES)) {
+    try {
+      // Fetch the news listing page
+      const response = await fetchWithTimeout(source.url);
+      const html = await response.text();
+      
+      // Transform the HTML into article previews
+      const previews = source.transform(html);
+      
+      // Process each preview into a full article
+      for (const preview of previews) {
+        if (!preview.link || !preview.title) continue;
+
+        // Fetch full article content
+        const content = await fetchArticleContent(preview.link);
+        
+        // Create article object
+        const article: Article = {
+          title: preview.title,
+          slug: preview.link.split('/').pop() || generateSlug(preview.title),
+          content: content,
+          excerpt: preview.excerpt || content.substring(0, 160) + '...',
+          publishDate: preview.date ? new Date(preview.date) : new Date(),
+          featuredImage: preview.image,
+          status: 'published',
+          readTime: Math.ceil(content.split(' ').length / 200), // Approximate reading time
+          sourceUrl: preview.link,
+          sourceName: sourceName,
+          scrapedAt: new Date(),
+          isScraped: true
+        };
+
+        articles.push(article);
+      }
+    } catch (error) {
+      console.error(`Error fetching from ${sourceName}:`, error);
+    }
+  }
+
+  // Sort articles by date, newest first
+  return articles.sort((a, b) => b.publishDate.getTime() - a.publishDate.getTime());
+}
+
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 } 
