@@ -3,11 +3,12 @@ import type { RequestHandler } from './$types';
 import { fetchNews } from '$lib/news-fetching';
 import { MongoClient } from 'mongodb';
 import type { Article } from '../../../types/article';
+import { MONGODB_URI } from '$env/static/private';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/perthglorynews';
+const mongoUri = MONGODB_URI || 'mongodb://localhost:27017/perthglorynews';
 
 export const GET: RequestHandler = async () => {
-  const client = new MongoClient(MONGODB_URI);
+  const client = new MongoClient(mongoUri);
 
   try {
     // Fetch fresh news

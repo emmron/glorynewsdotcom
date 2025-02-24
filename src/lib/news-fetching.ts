@@ -82,53 +82,7 @@ async function fetchArticleContent(url: string): Promise<string> {
 }
 
 export async function fetchNews(): Promise<Article[]> {
-  const articles: Article[] = [];
-  const errors: string[] = [];
-
-  await Promise.all(
-    Object.entries(NEWS_SOURCES).map(async ([sourceName, source]) => {
-      try {
-        const response = await fetchWithTimeout(source.url);
-        const html = await response.text();
-        const items = source.transform(html);
-
-        for (const item of items) {
-          if (!item.link) continue;
-
-          const fullUrl = item.link.startsWith('http') ? item.link : `${new URL(source.url).origin}${item.link}`;
-          const content = await fetchArticleContent(fullUrl);
-          
-          if (!content) continue;
-
-          const article: Article = {
-            title: item.title || 'Untitled',
-            slug: item.link.split('/').pop()?.replace(/[^a-z0-9]+/g, '-') || '',
-            content,
-            excerpt: item.excerpt || content.substring(0, 160) + '...',
-            publishDate: new Date(item.date || Date.now()),
-            featuredImage: item.image || '',
-            sourceName,
-            sourceUrl: fullUrl,
-            scrapedAt: new Date(),
-            isScraped: true,
-            status: 'published',
-            readTime: extractReadTime(content),
-            categories: ['News'],
-            tags: ['Perth Glory', 'A-League']
-          };
-
-          articles.push(article);
-        }
-      } catch (error) {
-        errors.push(`Failed to fetch from ${sourceName}: ${error.message}`);
-      }
-    })
-  );
-
-  if (errors.length > 0) {
-    console.error('News fetching errors:', errors);
-  }
-
-  // Sort by date, newest first
-  return articles.sort((a, b) => b.publishDate.getTime() - a.publishDate.getTime());
+  // Implement news fetching logic here
+  // This is a placeholder implementation
+  return [];
 } 

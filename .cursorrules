@@ -116,20 +116,67 @@
       <field>isScraped: Boolean</field>
     </article-structure>
     <scraping-sources>
-      <source>Official Perth Glory website</source>
-      <source>Major Australian sports news websites</source>
-      <source>Public football news RSS feeds</source>
-      <source>Public social media posts</source>
-      <source>Public match statistics</source>
+      <source>
+        <sname>Perth Glory Official</name>
+        <url>https://www.perthglory.com.au</url>
+        <updateInterval>15</updateInterval>
+        <priority>high</priority>
+        <selectors>
+          <list>.news-list article</list>
+          <title>.article-title</title>
+          <content>.article-content</content>
+        </selectors>
+      </source>
+      <source>
+        <name>Keep Up</name>
+        <url>https://keepup.com.au/perth-glory</url>
+        <updateInterval>15</updateInterval>
+        <priority>medium</priority>
+        <selectors>
+          <list>.news-grid article</list>
+          <title>h2</title>
+          <content>.article-body</content>
+        </selectors>
+      </source>
+      <source>
+        <name>Football Australia</name>
+        <url>https://www.footballaustralia.com.au/news</url>
+        <updateInterval>30</updateInterval>
+        <priority>medium</priority>
+      </source>
+      <source>
+        <name>Social Media Aggregator</name>
+        <platforms>twitter,facebook,instagram</platforms>
+        <updateInterval>5</updateInterval>
+        <priority>low</priority>
+      </source>
     </scraping-sources>
     <scraping-rules>
-      <rule>Respect robots.txt and crawling policies</rule>
-      <rule>Implement proper rate limiting</rule>
-      <rule>Credit original sources</rule>
-      <rule>Store source URLs</rule>
-      <rule>Validate content authenticity</rule>
-      <rule>Remove duplicate content</rule>
-      <rule>Handle content attribution properly</rule>
+      <rule>
+        <name>Rate Limiting</name>
+        <config>
+          <requests>2</requests>
+          <interval>10</interval>
+          <retryAttempts>3</retryAttempts>
+        </config>
+      </rule>
+      <rule>
+        <name>Content Attribution</name>
+        <requirements>
+          <sourceUrl>required</sourceUrl>
+          <sourceName>required</sourceName>
+          <publishDate>required</publishDate>
+          <author>optional</author>
+        </requirements>
+      </rule>
+      <rule>
+        <name>Content Validation</name>
+        <checks>
+          <duplicateDetection>true</duplicateDetection>
+          <contentAuthenticity>true</contentAuthenticity>
+          <robotsTxtCompliance>true</robotsTxtCompliance>
+        </checks>
+      </rule>
     </scraping-rules>
     <update-frequency>
       <schedule>Match updates: Real-time during games</schedule>
@@ -160,30 +207,32 @@
     <priorities>
       - Prioritize Perth Glory-specific content with precise and accurate football terminology
       - Implement mobile-first responsive design using TailwindCSS for optimal user experience across devices
-      - Maintain clean, highly performant code adhering to React best practices and Next.js conventions
-      - Adhere strictly to football news industry standards for content quality and integrity
+      - Maintain clean, highly performant code adhering to SvelteKit best practices and conventions
       - Structure articles with clear hierarchy and semantic HTML to enhance readability and SEO
-      - Optimize for ultra-fast loading times leveraging Next.js ISR and advanced caching techniques
-      - Ensure real-time updates for match results, breaking news, and live scores to keep fans engaged
-      - Focus intensely on Perth Glory specific content and terminology to cater to the dedicated fanbase
-      - Ensure mobile-first responsive design is not just implemented but perfected for all devices
-      - Maintain clean, performant code that not only meets but exceeds industry standards
+      - Optimize for Vercel deployment using @sveltejs/adapter-vercel
+      - Configure proper edge caching strategies on Vercel's CDN
+      - Implement efficient data fetching using SvelteKit endpoints optimized for serverless functions
+      - Utilize Svelte stores for state management and real-time updates
+      - Ensure proper error handling and loading states for news fetching operations
+      - Configure proper build output for Vercel's serverless environment
       - Follow football news industry best practices meticulously to uphold the highest journalistic standards
-      - Implement proper news article structuring with attention to detail for enhanced user engagement
-      - Ensure fast loading times for articles are not just met but significantly surpassed for user satisfaction
+      - Use environment variables for configuration in Vercel deployment
+      - Implement proper API rate limiting for Vercel serverless functions
     </priorities>
     <constraints>
       - Respect copyright when handling news content, ensuring all sources are properly credited
       - Ensure accessibility compliance to the highest standards, making content available to all users
-      - Optimize for performance, pushing the limits of what's possible with modern web technologies
+      - Optimize bundle size for Vercel's serverless function limits
       - Follow journalistic standards rigorously, maintaining the integrity and accuracy of all published content
-      - Maintain proper article versioning to track changes and ensure content history is preserved
+      - Configure proper Vercel project settings for optimal performance
     </constraints>
     <content-guidelines>
       - Use proper football terminology consistently and accurately to reflect the sport's nuances
-      - Maintain consistent article formatting across all content to provide a cohesive user experience
-      - Include proper image handling with optimized loading and responsive design for all devices
-      - Implement social sharing features that are seamless and encourage user engagement and content spread
+      - Implement efficient news article caching using Vercel's edge caching
+      - Utilize Vercel's image optimization features for media assets
+      - Implement social sharing features using native web share API when available
+      - Structure API endpoints to work efficiently in serverless environment
+      - Configure proper cache-control headers for Vercel CDN
     </content-guidelines>
   </ai-instructions>
 </cursor-rules> 

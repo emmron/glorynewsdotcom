@@ -1,14 +1,13 @@
 import adapter from '@sveltejs/adapter-vercel';
-import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+import { vitePreprocess } from '@sveltejs/kit/vite';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
-	preprocess: vitePreprocess(),
-
 	kit: {
-		adapter: adapter({
-			runtime: 'nodejs18.x'
-		}),
+		adapter: adapter(),
+		env: {
+			dir: process.cwd()
+		},
 		prerender: {
 			handleHttpError: ({ path, referrer, message }) => {
 				if (path.startsWith('/images/')) {
@@ -24,7 +23,8 @@ const config = {
 		paths: {
 			base: ''
 		}
-	}
+	},
+	preprocess: vitePreprocess()
 };
 
 export default config;

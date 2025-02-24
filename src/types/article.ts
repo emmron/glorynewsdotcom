@@ -2,19 +2,19 @@ export interface Article {
   title: string;
   slug: string;
   content: string;
-  excerpt: string;
+  excerpt?: string;
+  author?: string;
   publishDate: Date;
-  featuredImage: string;
-  sourceName: string;
-  sourceUrl: string;
-  scrapedAt: Date;
-  isScraped: boolean;
-  status: 'draft' | 'published';
   categories?: string[];
   tags?: string[];
-  author?: string;
+  featuredImage?: string;
+  status: 'draft' | 'published';
   readTime?: number;
   lastModified?: Date;
   imageBlurHash?: string;
   relatedArticles?: string[];
+  sourceUrl?: string;
+  sourceName?: string;
+  scrapedAt?: Date;
+  isScraped?: boolean;
 } 
