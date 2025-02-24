@@ -68,24 +68,63 @@ export interface RecentMatches {
 }
 
 export interface NewsArticle {
+  // Basic Information
   title: string;
   slug: string;
   content: string;
   excerpt?: string;
   author?: string;
   publishDate: Date;
+  lastModified: Date;
+
+  // Categories and Tags
   categories?: string[];
   tags?: string[];
+
+  // Media
   featuredImage?: string;
+  imageBlurHash?: string;
+  imageAlt?: string;
+  gallery?: string[];
+
+  // Metadata
   status: 'draft' | 'published';
   readTime?: number;
-  lastModified: Date;
-  imageBlurHash?: string;
-  relatedArticles?: string[];
+  viewCount: number;
+  likes: number;
+  shares: number;
+
+  // SEO
+  metaTitle?: string;
+  metaDescription?: string;
+  canonicalUrl?: string;
+  ogImage?: string;
+
+  // Social Sharing
+  twitterCard?: string;
+  facebookImage?: string;
+
+  // Source Information
   sourceUrl: string;
   sourceName: string;
   scrapedAt: Date;
   isScraped: boolean;
+
+  // Related Content
+  relatedArticles?: string[];
+  
+  // Comments
+  commentsEnabled: boolean;
+  commentCount: number;
+
+  // Analytics
+  pageViews: number;
+  uniqueViews: number;
+  averageTimeOnPage?: number;
+
+  // Validation
+  isValid: boolean;
+  validationErrors?: string[];
 }
 
 export interface NewsSource {
