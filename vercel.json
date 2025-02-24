@@ -28,6 +28,59 @@
                     "value": "strict-origin-when-cross-origin"
                 }
             ]
+        },
+        {
+            "source": "/static/(.*)",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                }
+            ]
+        },
+        {
+            "source": "/api/(.*)",
+            "headers": [
+                {
+                    "key": "Access-Control-Allow-Origin",
+                    "value": "*"
+                },
+                {
+                    "key": "Access-Control-Allow-Methods",
+                    "value": "GET, POST, PUT, DELETE, OPTIONS"
+                },
+                {
+                    "key": "Access-Control-Allow-Headers",
+                    "value": "X-Requested-With, Content-Type, Authorization"
+                },
+                {
+                    "key": "X-RateLimit-Limit",
+                    "value": "100"
+                },
+                {
+                    "key": "X-RateLimit-Remaining",
+                    "value": "99"
+                }
+            ]
         }
-    ]
+    ],
+    "redirects": [
+        {
+            "source": "/news/:year/:month/:day/:slug",
+            "destination": "/news/:slug",
+            "permanent": true
+        }
+    ],
+    "build": {
+        "env": {
+            "NODE_ENV": "production"
+        }
+    },
+    "regions": ["syd1"],
+    "functions": {
+        "api/cron/fetch-news": {
+            "memory": 1024,
+            "maxDuration": 60
+        }
+    }
 }

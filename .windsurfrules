@@ -1,0 +1,15 @@
+cursor:
+  rules:
+    - description: Windsurf-specific coding rules
+      globs: ["src/**/*.{js,ts,svelte}"]
+      rule:
+        - "Use camelCase for variable and function names"
+        - "Use PascalCase for component names"
+        - "Prefer const over let when possible"
+        - "Use async/await for asynchronous operations"
+        - "Include JSDoc comments for functions and classes"
+        - "Use TypeScript for type safety"
+        - "Follow Svelte best practices for component structure"
+        - "Implement error handling in all API calls"
+        - "Use meaningful variable names related to windsurfing terms"
+        - "Keep components small and focused on a single responsibility"

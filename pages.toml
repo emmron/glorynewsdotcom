@@ -1,0 +1,11 @@
+# pages.toml for Cloudflare Pages Deployment
+
+[build]
+# Command to build the site. Make sure your build script compiles the src code to the output folder.
+command = "npm run build"
+
+# Directory where the built site is located. Adjust if necessary.
+publish = "dist"
+
+[build.environment]
+NODE_VERSION = "16"
