@@ -1,35 +1,30 @@
 import sanitizeHtml from 'sanitize-html';
 
-export function sanitizeHtml(html: string): string {
+export function sanitizeContent(html: string): string {
   return sanitizeHtml(html, {
-    allowedTags: [
-      'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'ul', 'ol', 'li',
-      'b', 'i', 'strong', 'em', 'strike', 'code', 'hr', 'br', 'div',
-      'table', 'thead', 'tbody', 'tr', 'th', 'td', 'pre', 'blockquote',
-      'img', 'figure', 'figcaption'
-    ],
+    allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
     allowedAttributes: {
-      'a': ['href', 'target', 'rel'],
-      'img': ['src', 'alt', 'title'],
-      '*': ['class']
-    },
-    allowedSchemes: ['http', 'https', 'mailto'],
-    transformTags: {
-      'a': (tagName, attribs) => ({
-        tagName,
-        attribs: {
-          ...attribs,
-          target: '_blank',
-          rel: 'noopener noreferrer'
-        }
-      })
+      ...sanitizeHtml.defaults.allowedAttributes,
+      img: ['src', 'alt', 'title']
     }
   });
 }
 
 export function extractReadTime(content: string): number {
-  // Average reading speed: 200 words per minute
-  const WORDS_PER_MINUTE = 200;
-  const wordCount = content.trim().split(/\s+/).length;
-  return Math.ceil(wordCount / WORDS_PER_MINUTE);
+  const wordsPerMinute = 200;
+  const words = content.trim().split(/\s+/).length;
+  return Math.ceil(words / wordsPerMinute);
+}
+
+export async function fetchWithTimeout(url: string, timeout = 5000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(id);
+    return response;
+  } catch (error) {
+    clearTimeout(id);
+    throw error;
+  }
 } 

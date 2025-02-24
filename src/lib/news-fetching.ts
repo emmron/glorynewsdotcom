@@ -1,12 +1,11 @@
 import { parse } from 'node-html-parser';
-import type { Article } from '../types/article';
-import { sanitizeHtml, extractReadTime } from './utils';
-import type { NewsArticle, NewsSource } from '$lib/types';
+import type { Article, NewsArticle, NewsSource } from '$lib/types';
+import { sanitizeContent, extractReadTime, fetchWithTimeout } from './utils';
 
 const NEWS_SOURCES: NewsSource[] = [
   {
     name: 'Perth Glory Official',
-    url: 'https://www.perthglory.com.au',
+    url: 'https://www.perthglory.com.au/news',
     updateInterval: 15,
     priority: 'high',
     selectors: {
@@ -17,7 +16,7 @@ const NEWS_SOURCES: NewsSource[] = [
   },
   {
     name: 'Keep Up',
-    url: 'https://keepup.com.au/perth-glory',
+    url: 'https://keepup.com.au/clubs/perth-glory',
     updateInterval: 15,
     priority: 'medium',
     selectors: {
@@ -30,22 +29,9 @@ const NEWS_SOURCES: NewsSource[] = [
 
 const RATE_LIMIT = {
   requests: 2,
-  interval: 10,
+  interval: 10000, // 10 seconds
   retryAttempts: 3
 };
-
-async function fetchWithTimeout(url: string, timeout = 5000) {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-  try {
-    const response = await fetch(url, { signal: controller.signal });
-    clearTimeout(id);
-    return response;
-  } catch (error) {
-    clearTimeout(id);
-    throw error;
-  }
-}
 
 async function fetchArticleContent(url: string): Promise<string> {
   try {
@@ -58,31 +44,51 @@ async function fetchArticleContent(url: string): Promise<string> {
 
     // Get the main content
     const content = root.querySelector('.article-content, .content-main, .article-body')?.innerHTML || '';
-    return sanitizeHtml(content);
+    return sanitizeContent(content);
   } catch (error) {
     console.error(`Error fetching article content from ${url}:`, error);
     return '';
   }
 }
 
-async function fetchFromSource(source: NewsSource): Promise<NewsArticle[]> {
+async function fetchFromSource(source: NewsSource): Promise<Article[]> {
   try {
     const response = await fetch(source.url);
     if (!response.ok) {
       throw new Error(`Failed to fetch from ${source.name}`);
     }
 
-    // Process response and extract articles
-    // This is a placeholder - actual implementation would use proper HTML parsing
-    const articles: NewsArticle[] = [];
+    const html = await response.text();
+    const root = parse(html);
+    const articles: Article[] = [];
 
-    return articles.map(article => ({
-      ...article,
-      sourceName: source.name,
-      sourceUrl: source.url,
-      scrapedAt: new Date(),
-      isScraped: true
-    }));
+    const articleElements = root.querySelectorAll(source.selectors.list);
+    
+    for (const element of articleElements) {
+      const titleElement = element.querySelector(source.selectors.title);
+      const title = titleElement?.text?.trim() || '';
+      const url = titleElement?.getAttribute('href') || '';
+      
+      if (!title || !url) continue;
+
+      const content = await fetchArticleContent(url);
+      const readTime = extractReadTime(content);
+
+      articles.push({
+        id: generateSlug(title),
+        title,
+        content,
+        url: new URL(url, source.url).toString(),
+        publishDate: new Date(),
+        source: source.name,
+        imageUrl: element.querySelector('img')?.getAttribute('src') || undefined
+      });
+
+      // Respect rate limiting
+      await new Promise(resolve => setTimeout(resolve, RATE_LIMIT.interval / RATE_LIMIT.requests));
+    }
+
+    return articles;
   } catch (error) {
     console.error(`Error fetching from ${source.name}:`, error);
     return [];
@@ -90,8 +96,18 @@ async function fetchFromSource(source: NewsSource): Promise<NewsArticle[]> {
 }
 
 export async function fetchNews(): Promise<Article[]> {
-  // Placeholder implementation
-  return [];
+  const allArticles: Article[] = [];
+
+  for (const source of NEWS_SOURCES) {
+    try {
+      const articles = await fetchFromSource(source);
+      allArticles.push(...articles);
+    } catch (error) {
+      console.error(`Failed to fetch from ${source.name}:`, error);
+    }
+  }
+
+  return allArticles;
 }
 
 function generateSlug(title: string): string {
