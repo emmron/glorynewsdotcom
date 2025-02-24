@@ -4,7 +4,7 @@
         "schedule": "0 12 * * *"
     }],
     "env": {
-        "CRON_SECRET": "@cron_secret",
+        "CRON_SECRET": "generate_a_secure_random_string",
         "API_URL": "https://www.perthglory.com.au/wp-json/wp/v2/posts",
         "UPSTASH_REDIS_URL": "@upstash_redis_url",
         "UPSTASH_REDIS_TOKEN": "@upstash_redis_token",
