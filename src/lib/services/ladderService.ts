@@ -1,8 +1,24 @@
+import { Redis } from '@upstash/redis';
 import type { LeagueLadder, TeamStats } from '$lib/types';
 
 // Cache management
 const CACHE_KEY = 'perth-glory-ladder-data';
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
+const REDIS_CACHE_KEY = 'ladder_data';
+
+// Initialize Redis client
+let redis: Redis | null = null;
+try {
+    if (import.meta.env.VITE_UPSTASH_REDIS_REST_URL && import.meta.env.VITE_UPSTASH_REDIS_REST_TOKEN) {
+        redis = new Redis({
+            url: import.meta.env.VITE_UPSTASH_REDIS_REST_URL,
+            token: import.meta.env.VITE_UPSTASH_REDIS_REST_TOKEN,
+        });
+    }
+} catch (error) {
+    console.error('Failed to initialize Redis client:', error);
+    redis = null;
+}
 
 /**
  * Fetches the current A-League ladder standings
@@ -15,14 +31,27 @@ export async function fetchALeagueLadder(options?: {
     forceRefresh?: boolean
 }): Promise<LeagueLadder> {
     try {
-        // Check browser cache first if not forcing refresh
+        // Check Redis cache first if available and not forcing refresh
+        if (redis && !options?.forceRefresh) {
+            try {
+                const cachedData = await redis.get(REDIS_CACHE_KEY);
+                if (cachedData) {
+                    console.log('Using Redis cached ladder data');
+                    return cachedData as LeagueLadder;
+                }
+            } catch (error) {
+                console.error('Error accessing Redis cache:', error);
+            }
+        }
+
+        // Check browser cache if not forcing refresh
         if (!options?.forceRefresh && typeof window !== 'undefined') {
             const cachedData = localStorage.getItem(CACHE_KEY);
             if (cachedData) {
                 const { data, timestamp } = JSON.parse(cachedData);
                 // Use cached data if it's still fresh
                 if (Date.now() - timestamp < CACHE_DURATION) {
-                    console.log('Using cached ladder data');
+                    console.log('Using browser cached ladder data');
                     return data;
                 }
             }
@@ -59,6 +88,15 @@ export async function fetchALeagueLadder(options?: {
                 author: 'A-League'
             }
         };
+
+        // Store in Redis cache if available
+        if (redis) {
+            try {
+                await redis.set(REDIS_CACHE_KEY, ladderData, { ex: CACHE_DURATION / 1000 });
+            } catch (error) {
+                console.error('Error storing data in Redis:', error);
+            }
+        }
 
         // Store in browser cache
         if (typeof window !== 'undefined') {
@@ -125,6 +163,37 @@ async function fetchFromAlternateSource(options?: {
     signal?: AbortSignal
 }): Promise<LeagueLadder> {
     try {
+        // Try the Keep Football API first
+        const keepFootballUrl = 'https://api.keepfootball.net/v1/competitions/a-league/standings';
+
+        const kfResponse = await fetch(keepFootballUrl, {
+            method: 'GET',
+            cache: options?.cache || 'no-cache',
+            signal: options?.signal,
+            headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'Perth Glory News/1.0'
+            }
+        });
+
+        if (kfResponse.ok) {
+            const kfData = await kfResponse.json();
+            const teams = parseKeepFootballDataToLadder(kfData);
+
+            return {
+                teams: teams,
+                lastUpdated: new Date().toISOString(),
+                leagueName: 'A-League Men',
+                season: getCurrentSeason(),
+                source: {
+                    name: 'Keep Football',
+                    url: 'https://keepfootball.net',
+                    author: 'Keep Football'
+                }
+            };
+        }
+
+        // Fall back to ESPN if Keep Football fails
         const espnUrl = 'https://site.api.espn.com/apis/v2/sports/soccer/aus.1/standings';
 
         const response = await fetch(espnUrl, {
@@ -156,10 +225,49 @@ async function fetchFromAlternateSource(options?: {
             }
         };
     } catch (error) {
-        console.error('Error fetching from alternate source:', error);
+        console.error('Error fetching from alternate sources:', error);
 
         // Fall back to local API
         return fallbackToLocalApi(options);
+    }
+}
+
+/**
+ * Parse Keep Football API data to our ladder format
+ */
+function parseKeepFootballDataToLadder(kfData: any): TeamStats[] {
+    try {
+        const standings = kfData?.standings || [];
+
+        if (!standings.length) {
+            throw new Error('No standings found in Keep Football data');
+        }
+
+        return standings.map((team: any) => {
+            const teamName = team.team?.name || 'Unknown Team';
+            const isPerthGlory = teamName.toLowerCase().includes('perth') ||
+                               teamName.toLowerCase().includes('glory');
+
+            return {
+                id: team.team?.id || teamName.toLowerCase().replace(/\s+/g, '-'),
+                name: teamName,
+                position: team.position || 0,
+                played: team.played || 0,
+                won: team.won || 0,
+                drawn: team.drawn || 0,
+                lost: team.lost || 0,
+                goalsFor: team.goalsFor || 0,
+                goalsAgainst: team.goalsAgainst || 0,
+                goalDifference: team.goalDifference || 0,
+                points: team.points || 0,
+                form: team.form?.split('') || generateRandomForm(),
+                logo: team.team?.logo || `/images/teams/${teamName.toLowerCase().replace(/\s+/g, '-')}.png`,
+                isPerthGlory
+            };
+        });
+    } catch (error) {
+        console.error('Error parsing Keep Football data:', error);
+        return generateFallbackLadderData();
     }
 }
 
@@ -214,6 +322,15 @@ function parseEspnDataToLadder(espnData: any): TeamStats[] {
  * @returns Promise resolving to the latest league ladder data
  */
 export async function refreshLadder(): Promise<LeagueLadder> {
+    // Clear Redis cache if available
+    if (redis) {
+        try {
+            await redis.del(REDIS_CACHE_KEY);
+        } catch (error) {
+            console.error('Error clearing Redis cache:', error);
+        }
+    }
+
     return fetchALeagueLadder({
         cache: 'reload',
         forceRefresh: true
