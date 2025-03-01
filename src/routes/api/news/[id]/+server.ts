@@ -5,17 +5,34 @@ import type { Article } from '$lib/types/news';
 
 // Convert our Article type to the format expected by the frontend
 function transformArticleForResponse(article: Article) {
+  // Make sure we handle dates properly
+  const publishDate = article.publishDate instanceof Date
+    ? article.publishDate
+    : new Date(article.publishDate);
+
   return {
     id: article.id,
     title: article.title,
     content: article.content,
     summary: article.content.replace(/<[^>]+>/g, '').substring(0, 200) + '...',
-    date: article.publishDate.toISOString(),
+    date: publishDate.toISOString(),
     imageUrl: article.images.featured || '/images/default-news.jpg',
     category: article.categories[0] || 'News',
-    source: article.metadata.source,
+    source: 'Perth Glory',
     sourceUrl: article.sourceUrl,
-    author: article.author || 'Perth Glory News'
+    author: article.author || 'Perth Glory News',
+
+    // Add fields to match what the frontend expects
+    slug: article.id,
+    excerpt: article.content.replace(/<[^>]+>/g, '').substring(0, 200) + '...',
+    publishDate: publishDate.toISOString(),
+    featuredImage: article.images.featured || '/images/default-news.jpg',
+    sourceName: 'Perth Glory',
+    readTime: article.metadata.readingTime,
+    scrapedAt: publishDate.toISOString(),
+    lastModified: publishDate.toISOString(),
+    tags: article.tags,
+    status: 'published'
   };
 }
 
