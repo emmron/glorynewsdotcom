@@ -1,5 +1,4 @@
 import type { NewsItem } from '$lib/types';
-import axios from 'axios';
 import { format } from 'date-fns';
 
 const API_URL = 'https://www.perthglory.com.au/wp-json/wp/v2/posts';
@@ -91,22 +90,27 @@ const getFallbackNews = (): NewsItem[] => {
 
 async function fetchWithRetry<T>(
     url: string,
-    options: Record<string, any> = {},
+    options: RequestInit = {},
     retries = MAX_RETRIES
 ): Promise<T> {
     let lastError: Error | null = null;
 
     for (let i = 0; i < retries; i++) {
         try {
-            const response = await axios.get<T>(url, {
-                timeout: 5000,
+            const response = await fetch(url, {
+                method: 'GET',
                 headers: {
                     'Accept': 'application/json',
                     'User-Agent': 'GloryNews/1.0'
                 },
                 ...options
             });
-            return response.data;
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            return await response.json() as T;
         } catch (error) {
             lastError = error instanceof Error ? error : new Error('Unknown error occurred');
             if (i < retries - 1) {
