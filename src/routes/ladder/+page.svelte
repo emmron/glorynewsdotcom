@@ -1,11 +1,14 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { fade, fly, slide, scale } from 'svelte/transition';
-  import { fetchALeagueLadder } from '$lib/services/ladderService';
   import type { LeagueLadder, TeamStats } from '$lib/types';
+  import { invalidateAll } from '$app/navigation';
+
+  // Get data from server-side load function
+  export let data;
 
   let ladder: LeagueLadder | null = null;
-  let loading = true;
+  let loading = false;
   let error = '';
   let highlightedTeam: string | null = null;
   let autoRefreshEnabled = true;
@@ -14,6 +17,18 @@
   let selectedStat: 'points' | 'goalDifference' | 'goalsFor' | 'goalsAgainst' = 'points';
   let previousLadder: LeagueLadder | null = null;
   let showChanges = false;
+  let loadingRefresh = false;
+
+  // Sync the data from the load function
+  $: {
+    ladder = data.ladder || null;
+
+    // If we got new data and had previous data, show the changes
+    if (ladder && previousLadder && ladder !== previousLadder) {
+      showChanges = true;
+      setTimeout(() => { showChanges = false; }, 5000); // Hide changes after 5 seconds
+    }
+  }
 
   // Auto-refresh every 5 minutes if enabled
   $: if (autoRefreshEnabled && !refreshInterval) {
@@ -23,40 +38,37 @@
     refreshInterval = undefined;
   }
 
-  onMount(async () => {
-    try {
-      loading = true;
-      ladder = await fetchALeagueLadder();
-    } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to load ladder';
-      console.error('Error in onMount:', e);
-    } finally {
-      loading = false;
-    }
-
+  onMount(() => {
+    // No need to fetch data on mount, it's already loaded via SvelteKit's load function
     return () => {
       if (refreshInterval) clearInterval(refreshInterval);
     };
   });
 
+  onDestroy(() => {
+    if (refreshInterval) clearInterval(refreshInterval);
+  });
+
   const handleRefresh = async () => {
     try {
+      loadingRefresh = true;
       previousLadder = ladder;
-      const newLadder = await fetchALeagueLadder();
-      if (JSON.stringify(newLadder) !== JSON.stringify(ladder)) {
-        ladder = newLadder;
-        showChanges = true;
-        setTimeout(() => { showChanges = false; }, 5000); // Hide changes after 5 seconds
-      }
+
+      // Use invalidateAll to refresh all data
+      await invalidateAll();
     } catch (e) {
       console.error('Error in auto-refresh:', e);
+    } finally {
+      loadingRefresh = false;
     }
   };
 
   const handleRetry = async () => {
     try {
       loading = true;
-      ladder = await fetchALeagueLadder();
+
+      // Use invalidateAll to refresh all data
+      await invalidateAll();
       error = '';
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load ladder';
@@ -172,11 +184,17 @@
                 <button
                   on:click={handleRefresh}
                   class="inline-flex items-center px-3 py-1.5 border border-purple-300 text-sm font-medium rounded-md text-purple-700 bg-white hover:bg-purple-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                  disabled={loadingRefresh}
                 >
-                  <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Refresh
+                  {#if loadingRefresh}
+                    <div class="h-4 w-4 mr-1.5 animate-spin rounded-full border-2 border-purple-600 border-t-transparent"></div>
+                    Refreshing...
+                  {:else}
+                    <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Refresh
+                  {/if}
                 </button>
               </div>
             </div>
@@ -291,6 +309,9 @@
             <div class="flex items-center gap-2">
               <span class="font-medium">Last updated:</span>
               <time datetime={ladder.lastUpdated}>{new Date(ladder.lastUpdated).toLocaleString('en-AU')}</time>
+              {#if loadingRefresh}
+                <span class="ml-2 text-purple-500 text-xs animate-pulse">Refreshing...</span>
+              {/if}
             </div>
             <div class="flex items-center gap-2">
               <span>Click on a team to highlight their position</span>
