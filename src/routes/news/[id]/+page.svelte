@@ -138,7 +138,7 @@
   }
 
   :global(.prose a:hover) {
-    color: theme(colors.purple.700);
+    color: #6b21a8;
     text-decoration: underline;
   }
 </style>
