@@ -1,7 +1,7 @@
 {
     "crons": [{
         "path": "/api/cron/fetch-news",
-        "schedule": "*/15 * * * *"
+        "schedule": "0 0 * * *"
     }],
     "env": {
         "CRON_SECRET": "$CRON_SECRET",
