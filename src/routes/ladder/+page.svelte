@@ -448,8 +448,9 @@
                     <div class="text-sm text-gray-500">Position</div>
                     <div class="text-xl font-bold {getPositionStyle(highlightedTeamStats.position)}">
                       {highlightedTeamStats.position}
-                      {isPlayoffPosition(highlightedTeamStats.position) ?
-                        <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full ml-1">Playoff</span> : ''}
+                      {#if isPlayoffPosition(highlightedTeamStats.position)}
+                        <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full ml-1">Playoff</span>
+                      {/if}
                     </div>
                   </div>
 
