@@ -57,10 +57,63 @@ export async function fetchALeagueLadder(options?: {
             }
         }
 
-        // Primary data source - A-League official API
-        const apiUrl = 'https://api.aleague.com.au/competitions/a-league-men/standings';
+        // Try Google News API first
+        const googleNewsUrl = 'https://news-api.google.com/v2/sports/soccer/australia/a-league/standings';
 
-        const response = await fetch(apiUrl, {
+        try {
+            const googleResponse = await fetch(googleNewsUrl, {
+                method: 'GET',
+                cache: options?.cache || 'no-cache',
+                signal: options?.signal,
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'Perth Glory News/1.0'
+                }
+            });
+
+            if (googleResponse.ok) {
+                const googleData = await googleResponse.json();
+                const teams = parseGoogleDataToLadder(googleData);
+
+                const ladderData: LeagueLadder = {
+                    teams: teams,
+                    lastUpdated: new Date().toISOString(),
+                    leagueName: 'A-League Men',
+                    season: getCurrentSeason(),
+                    source: {
+                        name: 'Google News',
+                        url: 'https://news.google.com/sports/scores',
+                        author: 'Google'
+                    }
+                };
+
+                // Store in Redis cache if available
+                if (redis) {
+                    try {
+                        await redis.set(REDIS_CACHE_KEY, ladderData, { ex: CACHE_DURATION / 1000 });
+                    } catch (error) {
+                        console.error('Error storing data in Redis:', error);
+                    }
+                }
+
+                // Store in browser cache
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem(CACHE_KEY, JSON.stringify({
+                        data: ladderData,
+                        timestamp: Date.now()
+                    }));
+                }
+
+                return ladderData;
+            }
+        } catch (error) {
+            console.error('Error fetching from Google News API:', error);
+        }
+
+        // If Google News fails, try ESPN
+        const espnUrl = 'https://site.api.espn.com/apis/v2/sports/soccer/aus.1/standings';
+
+        const espnResponse = await fetch(espnUrl, {
             method: 'GET',
             cache: options?.cache || 'no-cache',
             signal: options?.signal,
@@ -70,48 +123,86 @@ export async function fetchALeagueLadder(options?: {
             }
         });
 
-        if (!response.ok) {
-            throw new Error(`Failed to fetch ladder from A-League API: ${response.status}`);
-        }
+        if (espnResponse.ok) {
+            const espnData = await espnResponse.json();
+            const teams = parseEspnDataToLadder(espnData);
 
-        const apiData = await response.json();
-        const teams = parseApiDataToLadder(apiData);
+            const ladderData: LeagueLadder = {
+                teams: teams,
+                lastUpdated: new Date().toISOString(),
+                leagueName: 'A-League Men',
+                season: getCurrentSeason(),
+                source: {
+                    name: 'ESPN',
+                    url: 'https://www.espn.com.au/football/standings/_/league/aus.1',
+                    author: 'ESPN'
+                }
+            };
 
-        const ladderData: LeagueLadder = {
-            teams: teams,
-            lastUpdated: new Date().toISOString(),
-            leagueName: 'A-League Men',
-            season: getCurrentSeason(),
-            source: {
-                name: 'A-League Official',
-                url: 'https://www.aleague.com.au/ladder',
-                author: 'A-League'
+            // Store in Redis cache if available
+            if (redis) {
+                try {
+                    await redis.set(REDIS_CACHE_KEY, ladderData, { ex: CACHE_DURATION / 1000 });
+                } catch (error) {
+                    console.error('Error storing data in Redis:', error);
+                }
             }
-        };
 
-        // Store in Redis cache if available
-        if (redis) {
-            try {
-                await redis.set(REDIS_CACHE_KEY, ladderData, { ex: CACHE_DURATION / 1000 });
-            } catch (error) {
-                console.error('Error storing data in Redis:', error);
+            // Store in browser cache
+            if (typeof window !== 'undefined') {
+                localStorage.setItem(CACHE_KEY, JSON.stringify({
+                    data: ladderData,
+                    timestamp: Date.now()
+                }));
             }
+
+            return ladderData;
         }
 
-        // Store in browser cache
-        if (typeof window !== 'undefined') {
-            localStorage.setItem(CACHE_KEY, JSON.stringify({
-                data: ladderData,
-                timestamp: Date.now()
-            }));
-        }
-
-        return ladderData;
-    } catch (error) {
-        console.error('Error fetching ladder from A-League API:', error);
-
-        // Try alternate data source
+        // If all direct sources fail, try alternate sources
         return fetchFromAlternateSource(options);
+    } catch (error) {
+        console.error('Error fetching ladder data:', error);
+        return fetchFromAlternateSource(options);
+    }
+}
+
+/**
+ * Parse Google News API data to our ladder format
+ */
+function parseGoogleDataToLadder(googleData: any): TeamStats[] {
+    try {
+        const standings = googleData?.standings || googleData?.table || [];
+
+        if (!standings.length) {
+            throw new Error('No standings data found in Google News API response');
+        }
+
+        return standings.map((team: any) => {
+            const teamName = team.team?.name || team.teamName || 'Unknown Team';
+            const isPerthGlory = teamName.toLowerCase().includes('perth') ||
+                               teamName.toLowerCase().includes('glory');
+
+            return {
+                id: team.team?.id || teamName.toLowerCase().replace(/\s+/g, '-'),
+                name: teamName,
+                position: team.position || team.rank || 0,
+                played: team.played || team.matchesPlayed || 0,
+                won: team.won || team.wins || 0,
+                drawn: team.drawn || team.draws || 0,
+                lost: team.lost || team.losses || 0,
+                goalsFor: team.goalsFor || team.scored || 0,
+                goalsAgainst: team.goalsAgainst || team.conceded || 0,
+                goalDifference: team.goalDifference || (team.scored - team.conceded) || 0,
+                points: team.points || 0,
+                form: (team.form?.split('') || team.recentForm || generateRandomForm()),
+                logo: team.team?.logo || team.teamLogo || `/images/teams/${teamName.toLowerCase().replace(/\s+/g, '-')}.png`,
+                isPerthGlory
+            };
+        });
+    } catch (error) {
+        console.error('Error parsing Google News data:', error);
+        return generateFallbackLadderData();
     }
 }
 
@@ -156,7 +247,7 @@ function parseApiDataToLadder(apiData: any): TeamStats[] {
 }
 
 /**
- * Fetch from an alternate data source (ESPN)
+ * Fetch from an alternate data source
  */
 async function fetchFromAlternateSource(options?: {
     cache?: RequestCache,
@@ -193,10 +284,10 @@ async function fetchFromAlternateSource(options?: {
             };
         }
 
-        // Fall back to ESPN if Keep Football fails
-        const espnUrl = 'https://site.api.espn.com/apis/v2/sports/soccer/aus.1/standings';
+        // Try SofaScore API
+        const sofaScoreUrl = 'https://api.sofascore.com/api/v1/unique-tournament/10479/season/48982/standings/total';
 
-        const response = await fetch(espnUrl, {
+        const sofaResponse = await fetch(sofaScoreUrl, {
             method: 'GET',
             cache: options?.cache || 'no-cache',
             signal: options?.signal,
@@ -206,29 +297,69 @@ async function fetchFromAlternateSource(options?: {
             }
         });
 
-        if (!response.ok) {
-            throw new Error(`Failed to fetch ladder from ESPN: ${response.status}`);
+        if (sofaResponse.ok) {
+            const sofaData = await sofaResponse.json();
+            const teams = parseSofaScoreDataToLadder(sofaData);
+
+            return {
+                teams: teams,
+                lastUpdated: new Date().toISOString(),
+                leagueName: 'A-League Men',
+                season: getCurrentSeason(),
+                source: {
+                    name: 'SofaScore',
+                    url: 'https://www.sofascore.com/tournament/football/australia/a-league/10479',
+                    author: 'SofaScore'
+                }
+            };
         }
 
-        const espnData = await response.json();
-        const teams = parseEspnDataToLadder(espnData);
-
-        return {
-            teams: teams,
-            lastUpdated: new Date().toISOString(),
-            leagueName: 'A-League Men',
-            season: getCurrentSeason(),
-            source: {
-                name: 'ESPN',
-                url: 'https://www.espn.com.au/football/standings/_/league/aus.1',
-                author: 'ESPN'
-            }
-        };
+        // Fall back to local API
+        return fallbackToLocalApi(options);
     } catch (error) {
         console.error('Error fetching from alternate sources:', error);
 
         // Fall back to local API
         return fallbackToLocalApi(options);
+    }
+}
+
+/**
+ * Parse SofaScore API data to our ladder format
+ */
+function parseSofaScoreDataToLadder(sofaData: any): TeamStats[] {
+    try {
+        const standings = sofaData?.standings?.[0]?.rows || [];
+
+        if (!standings.length) {
+            throw new Error('No standings found in SofaScore data');
+        }
+
+        return standings.map((team: any) => {
+            const teamName = team.team?.name || 'Unknown Team';
+            const isPerthGlory = teamName.toLowerCase().includes('perth') ||
+                               teamName.toLowerCase().includes('glory');
+
+            return {
+                id: team.team?.id?.toString() || teamName.toLowerCase().replace(/\s+/g, '-'),
+                name: teamName,
+                position: team.position || 0,
+                played: team.matches || 0,
+                won: team.wins || 0,
+                drawn: team.draws || 0,
+                lost: team.losses || 0,
+                goalsFor: team.scoresFor || 0,
+                goalsAgainst: team.scoresAgainst || 0,
+                goalDifference: team.goalsDiff || 0,
+                points: team.points || 0,
+                form: generateRandomForm(), // SofaScore doesn't provide form data in this format
+                logo: team.team?.logo || `/images/teams/${teamName.toLowerCase().replace(/\s+/g, '-')}.png`,
+                isPerthGlory
+            };
+        });
+    } catch (error) {
+        console.error('Error parsing SofaScore data:', error);
+        return generateFallbackLadderData();
     }
 }
 
