@@ -4,11 +4,11 @@
         "schedule": "0 12 * * *"
     }],
     "env": {
-        "CRON_SECRET": "2cRBsQZFjl5mJhoPrSagu6z7X9MA0xwI",
-        "API_URL": "https://www.perthglory.com.au/wp-json/wp/v2/posts",
-        "UPSTASH_REDIS_URL": "your_upstash_redis_url_here",
-        "UPSTASH_REDIS_TOKEN": "your_upstash_redis_token_here",
-        "CLOUDFLARE_IMAGES_DOMAIN": "your_cloudflare_images_domain_here"
+        "CRON_SECRET": "$CRON_SECRET",
+        "API_URL": "$API_URL",
+        "UPSTASH_REDIS_URL": "$UPSTASH_REDIS_URL",
+        "UPSTASH_REDIS_TOKEN": "$UPSTASH_REDIS_TOKEN",
+        "CLOUDFLARE_IMAGES_DOMAIN": "$CLOUDFLARE_IMAGES_DOMAIN"
     },
     "headers": [
         {
