@@ -324,6 +324,70 @@
         ? 'bg-red-50 hover:bg-red-100'
         : 'hover:bg-purple-50';
   };
+
+  // New reactive variables
+  let selectedView: 'standard' | 'compact' | 'detailed' = 'standard';
+  let searchQuery = '';
+  let highlightPlayoff = true;
+
+  // New computed values
+  $: filteredTeams = sortedTeams.filter(team =>
+    team.teamName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  $: totalGoals = ladder?.teams.reduce((sum, team) => sum + team.goalsFor, 0) ?? 0;
+  $: avgGoalsPerGame = totalGoals / (ladder?.teams.reduce((sum, team) => sum + team.played, 0) ?? 1);
+
+  $: totalCleanSheets = ladder?.teams.reduce((sum, team) => {
+    const cleanSheets = team.form.filter(result =>
+      result.toLowerCase() === 'w' && team.goalsAgainst === 0
+    ).length;
+    return sum + cleanSheets;
+  }, 0) ?? 0;
+
+  $: mostCleanSheetsTeam = ladder?.teams.reduce((best, team) => {
+    const cleanSheets = team.form.filter(result =>
+      result.toLowerCase() === 'w' && team.goalsAgainst === 0
+    ).length;
+    return cleanSheets > best.cleanSheets ? { name: team.teamName, cleanSheets } : best;
+  }, { name: '', cleanSheets: 0 })?.name ?? '';
+
+  $: currentLeader = ladder?.teams[0]?.teamName ?? '';
+  $: leaderPointsGap = ladder?.teams[0] && ladder?.teams[1]
+    ? ladder.teams[0].points - ladder.teams[1].points
+    : 0;
+
+  $: bestFormTeam = ladder?.teams.reduce((best, team) => {
+    const formPoints = team.form.reduce((sum, result) => {
+      if (result.toLowerCase() === 'w') return sum + 3;
+      if (result.toLowerCase() === 'd') return sum + 1;
+      return sum;
+    }, 0);
+    return formPoints > best.points ? { name: team.teamName, points: formPoints, form: team.form } : best;
+  }, { name: '', points: 0, form: [] as string[] });
+
+  $: bestFormTeamResults = bestFormTeam?.form ?? [];
+
+  // New helper functions
+  const toggleStats = () => {
+    showStats = !showStats;
+    if (showStats && !selectedStat) {
+      selectedStat = 'points';
+    }
+  };
+
+  const toggleHighlightPlayoff = (value: boolean) => {
+    highlightPlayoff = value;
+  };
+
+  const getFormBadgeClass = (result: string) => {
+    switch (result.toLowerCase()) {
+      case 'w': return 'bg-green-500 text-white';
+      case 'l': return 'bg-red-500 text-white';
+      case 'd': return 'bg-gray-500 text-white';
+      default: return 'bg-gray-300 text-gray-700';
+    }
+  };
 </script>
 
 <svelte:head>
@@ -407,7 +471,7 @@
             <div class="flex flex-wrap gap-4 items-center justify-between">
               <div class="flex items-center gap-4">
                 <button
-                  on:click={() => showStats = !showStats}
+                  on:click={() => toggleStats()}
                   class="inline-flex items-center px-3 py-1.5 border border-purple-300 text-sm font-medium rounded-md text-purple-700 bg-white hover:bg-purple-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
                 >
                   {showStats ? 'Hide Stats' : 'Show Stats'}
@@ -522,7 +586,7 @@
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
-                {#each sortedTeams as team}
+                {#each filteredTeams as team}
                   <tr
                     class="team-row {getTeamPerformanceClass(team)}
                           {isPlayoffPosition(team.position) ? 'border-l-4 border-l-green-500' : ''}
@@ -812,6 +876,148 @@
           </div>
         </div>
       {/if}
+
+      <!-- Add interactive filters and controls -->
+      <div class="controls-section mb-6 bg-white rounded-xl p-6 shadow-sm" in:fly={{ y: 20, duration: 300 }}>
+        <div class="flex flex-wrap gap-6 items-center justify-between">
+          <div class="flex flex-wrap gap-4 items-center">
+            <div class="relative">
+              <select
+                bind:value={selectedView}
+                class="appearance-none bg-purple-50 border border-purple-200 text-purple-900 text-sm rounded-lg pl-4 pr-10 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
+              >
+                <option value="standard">Standard View</option>
+                <option value="compact">Compact View</option>
+                <option value="detailed">Detailed View</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-purple-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <button
+                class="inline-flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200"
+                on:click={() => toggleStats()}
+              >
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                {showStats ? 'Hide Stats' : 'Show Stats'}
+              </button>
+
+              <button
+                class="inline-flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200"
+                on:click={() => toggleHighlightPlayoff(!highlightPlayoff)}
+              >
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                </svg>
+                {highlightPlayoff ? 'Hide Playoff Zone' : 'Show Playoff Zone'}
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-4">
+            <div class="relative">
+              <input
+                type="text"
+                placeholder="Search teams..."
+                bind:value={searchQuery}
+                class="w-64 bg-purple-50 border border-purple-200 text-purple-900 text-sm rounded-lg pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
+              />
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add quick stats overview -->
+      <div class="quick-stats-section mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" in:fly={{ y: 20, duration: 300, delay: 150 }}>
+        <div class="stat-card bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500">Total Goals</p>
+              <p class="text-2xl font-bold text-purple-900">{totalGoals}</p>
+            </div>
+            <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+          </div>
+          <div class="mt-4">
+            <div class="text-sm text-gray-500">Avg. per game</div>
+            <div class="text-lg font-semibold text-purple-700">{avgGoalsPerGame.toFixed(1)}</div>
+          </div>
+        </div>
+
+        <div class="stat-card bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500">Clean Sheets</p>
+              <p class="text-2xl font-bold text-purple-900">{totalCleanSheets}</p>
+            </div>
+            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+          </div>
+          <div class="mt-4">
+            <div class="text-sm text-gray-500">Most Clean Sheets</div>
+            <div class="text-lg font-semibold text-green-700">{mostCleanSheetsTeam}</div>
+          </div>
+        </div>
+
+        <div class="stat-card bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500">Current Leaders</p>
+              <p class="text-2xl font-bold text-purple-900">{currentLeader}</p>
+            </div>
+            <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+            </div>
+          </div>
+          <div class="mt-4">
+            <div class="text-sm text-gray-500">Points Gap</div>
+            <div class="text-lg font-semibold text-yellow-700">+{leaderPointsGap}</div>
+          </div>
+        </div>
+
+        <div class="stat-card bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500">Form Team</p>
+              <p class="text-2xl font-bold text-purple-900">{bestFormTeam}</p>
+            </div>
+            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </div>
+          </div>
+          <div class="mt-4">
+            <div class="text-sm text-gray-500">Last 5 Games</div>
+            <div class="flex gap-1 mt-1">
+              {#each bestFormTeamResults as result}
+                <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium {getFormBadgeClass(result)}">
+                  {result}
+                </span>
+              {/each}
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
 </div>
@@ -919,277 +1125,98 @@
 
   /* Team stats cards */
   .stat-card {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    will-change: transform, box-shadow;
-  }
-
-  .stat-card:hover {
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 4px 6px -1px rgba(147, 51, 234, 0.1),
-                0 2px 4px -2px rgba(147, 51, 234, 0.1);
-  }
-
-  /* Position change animations */
-  @keyframes slide-up {
-    0% { transform: translateY(10px); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
-  }
-
-  @keyframes slide-down {
-    0% { transform: translateY(-10px); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
-  }
-
-  .position-change--up {
-    animation: slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  }
-
-  .position-change--down {
-    animation: slide-down 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  }
-
-  /* Match card enhancements */
-  .match-card {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    will-change: transform, box-shadow;
     position: relative;
     overflow: hidden;
   }
 
-  .match-card::before {
+  .stat-card::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #9333ea 0%, #d8b4fe 100%);
-    transform: translateY(-100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .match-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 15px -3px rgba(147, 51, 234, 0.1),
-                0 4px 6px -4px rgba(147, 51, 234, 0.1);
-  }
-
-  .match-card:hover::before {
-    transform: translateY(0);
-  }
-
-  /* Responsive improvements */
-  @media (max-width: 640px) {
-    .ladder-table {
-      font-size: 0.875rem;
-    }
-
-    .ladder-table th,
-    .ladder-table td {
-      padding: 0.5rem;
-    }
-
-    .stat-card {
-      padding: 0.75rem;
-    }
-
-    .form-badge {
-      width: 1.25rem;
-      height: 1.25rem;
-      font-size: 0.675rem;
-    }
-  }
-
-  /* Dark mode enhancements */
-  @media (prefers-color-scheme: dark) {
-    .ladder-page {
-      background: linear-gradient(180deg, #1e1b4b 0%, #1e1e1e 100%);
-    }
-
-    .ladder-page__content,
-    .match-card,
-    .stat-card {
-      background-color: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(10px);
-    }
-
-    .team-row:hover {
-      background-color: rgba(147, 51, 234, 0.1);
-    }
-  }
-
-  /* Accessibility improvements */
-  @media (prefers-reduced-motion: reduce) {
-    .ladder-page__spinner,
-    .team-row,
-    .form-badge,
-    .stat-card,
-    .match-card,
-    .position-change--up,
-    .position-change--down {
-      animation: none;
-      transition: none;
-    }
-  }
-
-  /* Enhanced table header styles */
-  thead th {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    backdrop-filter: blur(8px);
-  }
-
-  .table-header-cell {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .table-header-cell::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, #9333ea 0%, #d8b4fe 100%);
-    transform: scaleX(0);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .table-header-cell:hover::after {
-    transform: scaleX(1);
-  }
-
-  /* Enhanced stat item styles */
-  .stat-item {
-    position: relative;
-    overflow: hidden;
-    border-radius: 0.75rem;
-    background: white;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .stat-item::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(147, 51, 234, 0.1), rgba(216, 180, 254, 0.1));
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      135deg,
+      rgba(147, 51, 234, 0.1) 0%,
+      rgba(167, 139, 250, 0.1) 100%
+    );
     opacity: 0;
     transition: opacity 0.3s ease;
   }
 
-  .stat-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px -1px rgba(147, 51, 234, 0.1),
-                0 2px 4px -2px rgba(147, 51, 234, 0.1);
-  }
-
-  .stat-item:hover::before {
+  .stat-card:hover::before {
     opacity: 1;
   }
 
-  /* Enhanced value display animations */
-  .stat-value {
-    position: relative;
-    display: inline-block;
-  }
-
-  .stat-value::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: currentColor;
-    transform: scaleX(0);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    transform-origin: left;
-  }
-
-  .stat-value:hover::after {
-    transform: scaleX(1);
-  }
-
-  /* Improved dark mode styles */
-  @media (prefers-color-scheme: dark) {
-    .stat-item {
-      background-color: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(10px);
-    }
-
-    .stat-item::before {
-      background: linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(216, 180, 254, 0.2));
-    }
-
-    .table-header-cell::after {
-      background: linear-gradient(90deg, #a855f7 0%, #d8b4fe 100%);
-    }
-
-    .stat-value {
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-    }
-  }
-
-  /* Enhanced mobile responsiveness */
-  @media (max-width: 640px) {
-    .stat-item {
-      padding: 0.75rem;
-    }
-
-    .stat-value {
-      font-size: 1rem;
-    }
-
-    .table-header-cell {
-      padding: 0.5rem;
-      font-size: 0.75rem;
-    }
-  }
-
-  /* Add smooth scrolling for the table */
-  .table-container {
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* Add scroll shadows */
-  .table-container::before,
-  .table-container::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 20px;
-    pointer-events: none;
-    z-index: 20;
-  }
-
-  .table-container::before {
-    left: 0;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), transparent);
-  }
-
-  .table-container::after {
-    right: 0;
-    background: linear-gradient(-90deg, rgba(255, 255, 255, 0.9), transparent);
-  }
-
-  /* Add loading state animations */
-  .loading-shimmer {
+  /* Enhanced controls */
+  .controls-section {
     background: linear-gradient(
-      90deg,
+      to right,
+      rgba(255, 255, 255, 0.9),
+      rgba(250, 245, 255, 0.9)
+    );
+    backdrop-filter: blur(8px);
+  }
+
+  /* Quick stats animations */
+  .quick-stats-section {
+    perspective: 1000px;
+  }
+
+  .stat-card {
+    transform-style: preserve-3d;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .stat-card:hover {
+    transform: translateY(-5px) rotateX(5deg);
+  }
+
+  /* Enhanced form badges */
+  .form-badge {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .form-badge::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      45deg,
       rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0.6) 50%,
+      rgba(255, 255, 255, 0.2) 50%,
       rgba(255, 255, 255, 0) 100%
     );
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
+    transform: rotate(45deg);
+    animation: shine 3s infinite;
   }
 
-  @keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
+  @keyframes shine {
+    0% { transform: translateX(-100%) rotate(45deg); }
+    100% { transform: translateX(100%) rotate(45deg); }
+  }
+
+  /* Dark mode enhancements */
+  @media (prefers-color-scheme: dark) {
+    .controls-section {
+      background: linear-gradient(
+        to right,
+        rgba(30, 27, 75, 0.9),
+        rgba(30, 27, 75, 0.8)
+      );
+    }
+
+    .stat-card::before {
+      background: linear-gradient(
+        135deg,
+        rgba(147, 51, 234, 0.2) 0%,
+        rgba(167, 139, 250, 0.2) 100%
+      );
+    }
   }
 </style>
