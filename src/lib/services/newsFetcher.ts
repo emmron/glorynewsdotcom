@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { Article, CacheOptions, ErrorLog, NewsSource } from '../types/news';
 import { CACHE_CONFIG } from '../types/news';
 import { PerthGlorySource } from '../sources/perthGlory';
+import { KeepUpSource } from '../sources/keepUp';
 
 // Create a schema for validating articles
 const ArticleSchema = z.object({
@@ -72,9 +73,9 @@ export class NewsFetcher {
     // Register news sources
     this.sources = new Map();
     this.sources.set('perthglory', new PerthGlorySource());
+    this.sources.set('keepup', new KeepUpSource());
 
     // More sources can be added here as they're implemented
-    // this.sources.set('keepup', new KeepUpSource());
     // this.sources.set('footballaustralia', new FootballAustraliaSource());
   }
 
