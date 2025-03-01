@@ -431,17 +431,94 @@
             <table class="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr class="bg-gradient-to-r from-purple-50 to-purple-100">
-                  <th class="sticky top-0 px-6 py-3 text-left text-xs font-medium text-purple-900 uppercase tracking-wider">Pos</th>
-                  <th class="sticky top-0 px-6 py-3 text-left text-xs font-medium text-purple-900 uppercase tracking-wider">Team</th>
-                  <th class="sticky top-0 px-6 py-3 text-center text-xs font-medium text-purple-900 uppercase tracking-wider">P</th>
-                  <th class="sticky top-0 px-6 py-3 text-center text-xs font-medium text-purple-900 uppercase tracking-wider">W</th>
-                  <th class="sticky top-0 px-6 py-3 text-center text-xs font-medium text-purple-900 uppercase tracking-wider">D</th>
-                  <th class="sticky top-0 px-6 py-3 text-center text-xs font-medium text-purple-900 uppercase tracking-wider">L</th>
-                  <th class="sticky top-0 px-6 py-3 text-center text-xs font-medium text-purple-900 uppercase tracking-wider">GF</th>
-                  <th class="sticky top-0 px-6 py-3 text-center text-xs font-medium text-purple-900 uppercase tracking-wider">GA</th>
-                  <th class="sticky top-0 px-6 py-3 text-center text-xs font-medium text-purple-900 uppercase tracking-wider">GD</th>
-                  <th class="sticky top-0 px-6 py-3 text-center text-xs font-medium text-purple-900 uppercase tracking-wider">PTS</th>
-                  <th class="sticky top-0 px-6 py-3 text-center text-xs font-medium text-purple-900 uppercase tracking-wider">Last 5</th>
+                  <th class="sticky top-0 px-6 py-3 text-left text-xs font-medium text-purple-900 uppercase tracking-wider group cursor-pointer hover:bg-purple-100 transition-colors duration-200">
+                    <div class="flex items-center gap-2">
+                      <span>Pos</span>
+                      <svg class="w-4 h-4 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </th>
+                  <th class="sticky top-0 px-6 py-3 text-left text-xs font-medium text-purple-900 uppercase tracking-wider group cursor-pointer hover:bg-purple-100 transition-colors duration-200">
+                    <div class="flex items-center gap-2">
+                      <span>Team</span>
+                      <svg class="w-4 h-4 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </th>
+                  <th class="sticky top-0 px-6 py-3 text-center text-xs font-medium text-purple-900 uppercase tracking-wider group cursor-pointer hover:bg-purple-100 transition-colors duration-200">
+                    <div class="flex items-center gap-2">
+                      <span>P</span>
+                      <svg class="w-4 h-4 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </th>
+                  <th class="sticky top-0 px-6 py-3 text-center text-xs font-medium text-purple-900 uppercase tracking-wider group cursor-pointer hover:bg-purple-100 transition-colors duration-200">
+                    <div class="flex items-center gap-2">
+                      <span>W</span>
+                      <svg class="w-4 h-4 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </th>
+                  <th class="sticky top-0 px-6 py-3 text-center text-xs font-medium text-purple-900 uppercase tracking-wider group cursor-pointer hover:bg-purple-100 transition-colors duration-200">
+                    <div class="flex items-center gap-2">
+                      <span>D</span>
+                      <svg class="w-4 h-4 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </th>
+                  <th class="sticky top-0 px-6 py-3 text-center text-xs font-medium text-purple-900 uppercase tracking-wider group cursor-pointer hover:bg-purple-100 transition-colors duration-200">
+                    <div class="flex items-center gap-2">
+                      <span>L</span>
+                      <svg class="w-4 h-4 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </th>
+                  <th class="sticky top-0 px-6 py-3 text-center text-xs font-medium text-purple-900 uppercase tracking-wider group cursor-pointer hover:bg-purple-100 transition-colors duration-200">
+                    <div class="flex items-center gap-2">
+                      <span>GF</span>
+                      <svg class="w-4 h-4 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </th>
+                  <th class="sticky top-0 px-6 py-3 text-center text-xs font-medium text-purple-900 uppercase tracking-wider group cursor-pointer hover:bg-purple-100 transition-colors duration-200">
+                    <div class="flex items-center gap-2">
+                      <span>GA</span>
+                      <svg class="w-4 h-4 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </th>
+                  <th class="sticky top-0 px-6 py-3 text-center text-xs font-medium text-purple-900 uppercase tracking-wider group cursor-pointer hover:bg-purple-100 transition-colors duration-200">
+                    <div class="flex items-center gap-2">
+                      <span>GD</span>
+                      <svg class="w-4 h-4 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </th>
+                  <th class="sticky top-0 px-6 py-3 text-center text-xs font-medium text-purple-900 uppercase tracking-wider group cursor-pointer hover:bg-purple-100 transition-colors duration-200">
+                    <div class="flex items-center gap-2">
+                      <span>PTS</span>
+                      <svg class="w-4 h-4 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </th>
+                  <th class="sticky top-0 px-6 py-3 text-center text-xs font-medium text-purple-900 uppercase tracking-wider group cursor-pointer hover:bg-purple-100 transition-colors duration-200">
+                    <div class="flex items-center gap-2">
+                      <span>Last 5</span>
+                      <svg class="w-4 h-4 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
@@ -547,43 +624,61 @@
               <div class="stat-card rounded-xl bg-gray-50 p-5">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">Key Statistics</h3>
                 <div class="grid grid-cols-2 gap-4">
-                  <div class="stat-item">
-                    <div class="text-sm text-gray-500">Position</div>
-                    <div class="text-xl font-bold {getPositionStyle(highlightedTeamStats.position)}">
-                      {highlightedTeamStats.position}
-                      {#if isPlayoffPosition(highlightedTeamStats.position)}
-                        <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full ml-1">Playoff</span>
-                      {/if}
+                  <div class="stat-item group relative overflow-hidden rounded-lg bg-white p-4 shadow-sm transition-all duration-300 hover:shadow-md">
+                    <div class="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-purple-500/10 opacity-0 transition-opacity group-hover:opacity-100"></div>
+                    <div class="relative z-10">
+                      <div class="text-sm text-gray-500 group-hover:text-purple-600 transition-colors">Position</div>
+                      <div class="text-xl font-bold {getPositionStyle(highlightedTeamStats.position)}">
+                        {highlightedTeamStats.position}
+                        {#if isPlayoffPosition(highlightedTeamStats.position)}
+                          <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full ml-1 animate-pulse">Playoff</span>
+                        {/if}
+                      </div>
                     </div>
                   </div>
 
-                  <div class="stat-item">
-                    <div class="text-sm text-gray-500">Win Rate</div>
-                    <div class="text-xl font-bold text-gray-800">{teamFormStats?.winPercentage}%</div>
-                  </div>
-
-                  <div class="stat-item">
-                    <div class="text-sm text-gray-500">Goal Difference</div>
-                    <div class="text-xl font-bold {highlightedTeamStats.goalDifference > 0 ? 'text-green-600' : highlightedTeamStats.goalDifference < 0 ? 'text-red-600' : 'text-gray-800'}">
-                      {highlightedTeamStats.goalDifference > 0 ? '+' : ''}{highlightedTeamStats.goalDifference}
+                  <div class="stat-item group relative overflow-hidden rounded-lg bg-white p-4 shadow-sm transition-all duration-300 hover:shadow-md">
+                    <div class="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-purple-500/10 opacity-0 transition-opacity group-hover:opacity-100"></div>
+                    <div class="relative z-10">
+                      <div class="text-sm text-gray-500 group-hover:text-purple-600 transition-colors">Win Rate</div>
+                      <div class="text-xl font-bold text-gray-800">{teamFormStats?.winPercentage}%</div>
                     </div>
                   </div>
 
-                  <div class="stat-item">
-                    <div class="text-sm text-gray-500">Current Streak</div>
-                    <div class="text-xl font-bold {teamFormStats?.streak.type === 'win' ? 'text-green-600' : teamFormStats?.streak.type === 'loss' ? 'text-red-600' : 'text-gray-600'}">
-                      {teamFormStats?.streak.count} {teamFormStats?.streak.type}{teamFormStats && teamFormStats.streak.count !== 1 ? 's' : ''}
+                  <div class="stat-item group relative overflow-hidden rounded-lg bg-white p-4 shadow-sm transition-all duration-300 hover:shadow-md">
+                    <div class="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-purple-500/10 opacity-0 transition-opacity group-hover:opacity-100"></div>
+                    <div class="relative z-10">
+                      <div class="text-sm text-gray-500 group-hover:text-purple-600 transition-colors">Goal Difference</div>
+                      <div class="text-xl font-bold {highlightedTeamStats.goalDifference > 0 ? 'text-green-600' : highlightedTeamStats.goalDifference < 0 ? 'text-red-600' : 'text-gray-800'}">
+                        {highlightedTeamStats.goalDifference > 0 ? '+' : ''}{highlightedTeamStats.goalDifference}
+                      </div>
                     </div>
                   </div>
 
-                  <div class="stat-item">
-                    <div class="text-sm text-gray-500">Avg Goals Scored</div>
-                    <div class="text-xl font-bold text-gray-800">{teamFormStats?.avgGoalsScored}</div>
+                  <div class="stat-item group relative overflow-hidden rounded-lg bg-white p-4 shadow-sm transition-all duration-300 hover:shadow-md">
+                    <div class="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-purple-500/10 opacity-0 transition-opacity group-hover:opacity-100"></div>
+                    <div class="relative z-10">
+                      <div class="text-sm text-gray-500 group-hover:text-purple-600 transition-colors">Current Streak</div>
+                      <div class="text-xl font-bold {teamFormStats?.streak.type === 'win' ? 'text-green-600' : teamFormStats?.streak.type === 'loss' ? 'text-red-600' : 'text-gray-600'}">
+                        {teamFormStats?.streak.count} {teamFormStats?.streak.type}{teamFormStats && teamFormStats.streak.count !== 1 ? 's' : ''}
+                      </div>
+                    </div>
                   </div>
 
-                  <div class="stat-item">
-                    <div class="text-sm text-gray-500">Avg Goals Conceded</div>
-                    <div class="text-xl font-bold text-gray-800">{teamFormStats?.avgGoalsConceded}</div>
+                  <div class="stat-item group relative overflow-hidden rounded-lg bg-white p-4 shadow-sm transition-all duration-300 hover:shadow-md">
+                    <div class="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-purple-500/10 opacity-0 transition-opacity group-hover:opacity-100"></div>
+                    <div class="relative z-10">
+                      <div class="text-sm text-gray-500 group-hover:text-purple-600 transition-colors">Avg Goals Scored</div>
+                      <div class="text-xl font-bold text-gray-800">{teamFormStats?.avgGoalsScored}</div>
+                    </div>
+                  </div>
+
+                  <div class="stat-item group relative overflow-hidden rounded-lg bg-white p-4 shadow-sm transition-all duration-300 hover:shadow-md">
+                    <div class="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-purple-500/10 opacity-0 transition-opacity group-hover:opacity-100"></div>
+                    <div class="relative z-10">
+                      <div class="text-sm text-gray-500 group-hover:text-purple-600 transition-colors">Avg Goals Conceded</div>
+                      <div class="text-xl font-bold text-gray-800">{teamFormStats?.avgGoalsConceded}</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -935,5 +1030,166 @@
       animation: none;
       transition: none;
     }
+  }
+
+  /* Enhanced table header styles */
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(8px);
+  }
+
+  .table-header-cell {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .table-header-cell::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #9333ea 0%, #d8b4fe 100%);
+    transform: scaleX(0);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .table-header-cell:hover::after {
+    transform: scaleX(1);
+  }
+
+  /* Enhanced stat item styles */
+  .stat-item {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.75rem;
+    background: white;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .stat-item::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(147, 51, 234, 0.1), rgba(216, 180, 254, 0.1));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .stat-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(147, 51, 234, 0.1),
+                0 2px 4px -2px rgba(147, 51, 234, 0.1);
+  }
+
+  .stat-item:hover::before {
+    opacity: 1;
+  }
+
+  /* Enhanced value display animations */
+  .stat-value {
+    position: relative;
+    display: inline-block;
+  }
+
+  .stat-value::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: currentColor;
+    transform: scaleX(0);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: left;
+  }
+
+  .stat-value:hover::after {
+    transform: scaleX(1);
+  }
+
+  /* Improved dark mode styles */
+  @media (prefers-color-scheme: dark) {
+    .stat-item {
+      background-color: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+    }
+
+    .stat-item::before {
+      background: linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(216, 180, 254, 0.2));
+    }
+
+    .table-header-cell::after {
+      background: linear-gradient(90deg, #a855f7 0%, #d8b4fe 100%);
+    }
+
+    .stat-value {
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+  }
+
+  /* Enhanced mobile responsiveness */
+  @media (max-width: 640px) {
+    .stat-item {
+      padding: 0.75rem;
+    }
+
+    .stat-value {
+      font-size: 1rem;
+    }
+
+    .table-header-cell {
+      padding: 0.5rem;
+      font-size: 0.75rem;
+    }
+  }
+
+  /* Add smooth scrolling for the table */
+  .table-container {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Add scroll shadows */
+  .table-container::before,
+  .table-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    pointer-events: none;
+    z-index: 20;
+  }
+
+  .table-container::before {
+    left: 0;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), transparent);
+  }
+
+  .table-container::after {
+    right: 0;
+    background: linear-gradient(-90deg, rgba(255, 255, 255, 0.9), transparent);
+  }
+
+  /* Add loading state animations */
+  .loading-shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.6) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
   }
 </style>
