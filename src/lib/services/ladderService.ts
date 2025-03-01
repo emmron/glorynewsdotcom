@@ -425,19 +425,34 @@ function parseEspnDataToLadder(espnData: any): TeamStats[] {
                 return stat ? parseInt(stat.value, 10) : 0;
             };
 
+            // Ensure we get the right stats - ESPN sometimes uses different naming
+            const getPoints = () => {
+                const pointsStat = stats.find((s: any) => s.type === 'points' || s.type === 'total');
+                return pointsStat ? parseInt(pointsStat.value, 10) : 0;
+            };
+
+            const getGoalDiff = () => {
+                const gdStat = stats.find((s: any) =>
+                    s.type === 'pointDifferential' ||
+                    s.type === 'goalDifferential' ||
+                    s.type === 'goalDiff'
+                );
+                return gdStat ? parseInt(gdStat.value, 10) : getStat('pointsFor') - getStat('pointsAgainst');
+            };
+
             return {
-                id: entry.team?.id || teamName.toLowerCase().replace(/\s+/g, '-'),
+                id: entry.team?.id?.toString() || teamName.toLowerCase().replace(/\s+/g, '-'),
                 name: teamName,
-                position: getStat('rank'),
-                played: getStat('gamesPlayed'),
-                won: getStat('wins'),
-                drawn: getStat('ties'),
-                lost: getStat('losses'),
-                goalsFor: getStat('pointsFor'),
-                goalsAgainst: getStat('pointsAgainst'),
-                goalDifference: getStat('pointDifferential'),
-                points: getStat('points'),
-                form: generateRandomForm(), // ESPN doesn't provide form data
+                position: getStat('rank') || parseInt(entry.position, 10) || 0,
+                played: getStat('gamesPlayed') || getStat('games') || 0,
+                won: getStat('wins') || 0,
+                drawn: getStat('ties') || getStat('draws') || 0,
+                lost: getStat('losses') || 0,
+                goalsFor: getStat('pointsFor') || getStat('goalsFor') || 0,
+                goalsAgainst: getStat('pointsAgainst') || getStat('goalsAgainst') || 0,
+                goalDifference: getGoalDiff(),
+                points: getPoints(),
+                form: parseFormFromESPN(stats) || generateRandomForm(),
                 logo: entry.team?.logos?.[0]?.href || `/images/teams/${teamName.toLowerCase().replace(/\s+/g, '-')}.png`,
                 isPerthGlory
             };
@@ -445,6 +460,33 @@ function parseEspnDataToLadder(espnData: any): TeamStats[] {
     } catch (error) {
         console.error('Error parsing ESPN data:', error);
         return generateFallbackLadderData();
+    }
+}
+
+/**
+ * Attempts to parse form data from ESPN stats if available
+ */
+function parseFormFromESPN(stats: any[]): string[] | null {
+    try {
+        const formStat = stats.find((s: any) => s.type === 'recentResults' || s.type === 'form');
+        if (!formStat || !formStat.value) return null;
+
+        // ESPN might provide form in different formats
+        if (Array.isArray(formStat.value)) {
+            return formStat.value.slice(0, 5).map((result: any) => {
+                if (typeof result === 'string') return result.charAt(0).toUpperCase();
+                return result.outcome?.charAt(0).toUpperCase() || 'D';
+            });
+        }
+
+        if (typeof formStat.value === 'string') {
+            return formStat.value.split('').slice(0, 5).map((c: string) => c.toUpperCase());
+        }
+
+        return null;
+    } catch (error) {
+        console.error('Error parsing form from ESPN:', error);
+        return null;
     }
 }
 
