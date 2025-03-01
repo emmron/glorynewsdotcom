@@ -28,12 +28,11 @@ export interface WordPressPost {
 }
 
 /**
- * Team statistics for the league ladder
+ * Team statistics in the league ladder
  */
 export interface TeamStats {
-  position: number;
   teamName: string;
-  logo: string;
+  position: number;
   played: number;
   won: number;
   drawn: number;
@@ -43,6 +42,7 @@ export interface TeamStats {
   goalDifference: number;
   points: number;
   form: string[]; // Array of W, L, D representing recent results
+  logo: string;
 }
 
 /**
