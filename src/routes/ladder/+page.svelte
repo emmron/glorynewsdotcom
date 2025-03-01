@@ -324,14 +324,11 @@
   }
 
   :global(.form-checkbox) {
-    @apply rounded border-gray-300 text-purple-600 shadow-sm
-           focus:border-purple-300 focus:ring
-           focus:ring-purple-200 focus:ring-opacity-50;
+    @apply rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50;
   }
 
   :global(.form-select) {
-    @apply rounded-md border-gray-300
-           focus:border-purple-500 focus:ring-purple-500;
+    @apply rounded-md border-gray-300 focus:border-purple-500 focus:ring-purple-500;
   }
 
   /* Custom scrollbar styles */
