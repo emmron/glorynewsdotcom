@@ -447,7 +447,7 @@
               <tbody class="bg-white divide-y divide-gray-200">
                 {#each sortedTeams as team}
                   <tr
-                    class="hover:bg-purple-50 transition-colors duration-200 cursor-pointer {highlightedTeam === team.teamName ? 'bg-purple-50' : ''}
+                    class="team-row {getTeamPerformanceClass(team)}
                           {isPlayoffPosition(team.position) ? 'border-l-4 border-l-green-500' : ''}
                           {isRelegationPosition(team.position, ladder.teams.length) ? 'border-l-4 border-l-red-500' : ''}"
                     on:click={() => toggleTeamHighlight(team.teamName)}
@@ -480,9 +480,9 @@
                         <span class="text-sm font-medium text-gray-900">{team.teamName}</span>
                       </div>
                       {#if showStats}
-                        <div class="mt-2 w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div class="stat-bar mt-2 w-full">
                           <div
-                            class="h-full bg-purple-500 transition-all duration-500"
+                            class="stat-bar__fill"
                             style="width: {getStatBarWidth(Math.abs(team[selectedStat]), getMaxStat(selectedStat))};"
                           ></div>
                         </div>
@@ -499,7 +499,9 @@
                     <td class="px-6 py-4 whitespace-nowrap">
                       <div class="flex justify-center gap-1">
                         {#each team.form as result}
-                          <span class="inline-flex items-center justify-center w-6 h-6 text-xs font-medium rounded-full shadow-sm transition-transform hover:scale-110 {getFormColor(result)}">
+                          <span
+                            class="form-badge form-badge--{result.toLowerCase()} inline-flex items-center justify-center w-6 h-6 text-xs font-medium rounded-full shadow-sm"
+                          >
                             {result.toUpperCase()}
                           </span>
                         {/each}
@@ -542,7 +544,7 @@
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <!-- Key Stats -->
-              <div class="stats-section rounded-xl bg-gray-50 p-5">
+              <div class="stat-card rounded-xl bg-gray-50 p-5">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">Key Statistics</h3>
                 <div class="grid grid-cols-2 gap-4">
                   <div class="stat-item">
@@ -726,131 +728,162 @@
     padding: 2rem 0;
   }
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+  /* Enhanced loading animation */
+  @keyframes pulse-and-spin {
+    0% { transform: rotate(0deg); opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { transform: rotate(360deg); opacity: 0.6; }
   }
 
   .ladder-page__spinner {
-    animation: spin 1s linear infinite, pulse 2s ease-in-out infinite;
+    animation: pulse-and-spin 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   }
 
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
-  :global(.form-checkbox) {
-    border-radius: 0.25rem;
-    border-color: #d1d5db;
-    color: #9333ea;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  }
-
-  :global(.form-checkbox:focus) {
-    border-color: #d8b4fe;
-    outline: none;
-    box-shadow: 0 0 0 2px #ddd6fe;
-    ring-opacity: 0.5;
-  }
-
-  :global(.form-select) {
-    border-radius: 0.375rem;
-    border-color: #d1d5db;
-  }
-
-  :global(.form-select:focus) {
-    border-color: #a855f7;
-    outline: none;
-    box-shadow: 0 0 0 2px #a855f7;
-  }
-
-  /* Custom scrollbar styles */
-  .overflow-x-auto {
-    scrollbar-width: thin;
-    scrollbar-color: #9333ea #f3e8ff;
-  }
-
-  .overflow-x-auto::-webkit-scrollbar {
-    height: 8px;
-  }
-
-  .overflow-x-auto::-webkit-scrollbar-track {
-    background: #f3e8ff;
-    border-radius: 4px;
-  }
-
-  .overflow-x-auto::-webkit-scrollbar-thumb {
-    background-color: #9333ea;
-    border-radius: 4px;
-    border: 2px solid #f3e8ff;
-  }
-
-  /* Hover effects */
+  /* Enhanced hover effects */
   .ladder-page__content {
-    transition: transform 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, box-shadow;
   }
 
   .ladder-page__content:hover {
-    transform: translateY(-2px);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px -5px rgba(147, 51, 234, 0.1),
+                0 8px 10px -6px rgba(147, 51, 234, 0.1);
   }
 
-  /* Match card styles */
-  .match-card {
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    transition: all 0.2s ease-in-out;
-  }
-
-  .match-card:hover {
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
-  }
-
-  /* Responsive design improvements */
-  @media (max-width: 640px) {
-    .ladder-page__header-container {
-      padding: 0 1rem;
-    }
-
-    .ladder-page__content {
-      padding: 1rem;
-    }
-  }
-
-  /* Form guide styles */
-  .stat-item {
-    padding: 0.75rem;
-    border-radius: 0.5rem;
-    background-color: white;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  }
-
-  .result-card {
-    transition: transform 0.2s ease-in-out;
-  }
-
-  .result-card:hover {
-    transform: translateY(-2px);
-  }
-
-  /* Add new styles for improved visual feedback */
+  /* Team row animations */
   .team-row {
-    transition: all 0.2s ease-in-out;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, background-color;
+    position: relative;
+  }
+
+  .team-row::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #9333ea 0%, #d8b4fe 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
   }
 
   .team-row:hover {
-    transform: translateX(4px);
+    transform: translateX(4px) scale(1.01);
   }
 
-  .stat-value {
-    transition: all 0.3s ease-in-out;
+  .team-row:hover::after {
+    opacity: 1;
   }
 
-  .stat-value:hover {
-    transform: scale(1.1);
+  /* Enhanced stat bars */
+  .stat-bar {
+    height: 4px;
+    background: linear-gradient(90deg, #e9d5ff 0%, #f3e8ff 100%);
+    border-radius: 2px;
+    overflow: hidden;
   }
 
-  /* Add responsive design improvements */
+  .stat-bar__fill {
+    height: 100%;
+    background: linear-gradient(90deg, #9333ea 0%, #a855f7 100%);
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: width;
+  }
+
+  /* Form result badges */
+  .form-badge {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+  }
+
+  .form-badge:hover {
+    transform: scale(1.2);
+    z-index: 10;
+  }
+
+  .form-badge--win {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .form-badge--loss {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .form-badge--draw {
+    background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Team stats cards */
+  .stat-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, box-shadow;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 4px 6px -1px rgba(147, 51, 234, 0.1),
+                0 2px 4px -2px rgba(147, 51, 234, 0.1);
+  }
+
+  /* Position change animations */
+  @keyframes slide-up {
+    0% { transform: translateY(10px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+
+  @keyframes slide-down {
+    0% { transform: translateY(-10px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+
+  .position-change--up {
+    animation: slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  .position-change--down {
+    animation: slide-down 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  /* Match card enhancements */
+  .match-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, box-shadow;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .match-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #9333ea 0%, #d8b4fe 100%);
+    transform: translateY(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .match-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(147, 51, 234, 0.1),
+                0 4px 6px -4px rgba(147, 51, 234, 0.1);
+  }
+
+  .match-card:hover::before {
+    transform: translateY(0);
+  }
+
+  /* Responsive improvements */
   @media (max-width: 640px) {
     .ladder-table {
       font-size: 0.875rem;
@@ -860,15 +893,47 @@
     .ladder-table td {
       padding: 0.5rem;
     }
+
+    .stat-card {
+      padding: 0.75rem;
+    }
+
+    .form-badge {
+      width: 1.25rem;
+      height: 1.25rem;
+      font-size: 0.675rem;
+    }
   }
 
-  /* Add animation for position changes */
-  .position-change {
-    animation: bounce 0.5s ease-in-out;
+  /* Dark mode enhancements */
+  @media (prefers-color-scheme: dark) {
+    .ladder-page {
+      background: linear-gradient(180deg, #1e1b4b 0%, #1e1e1e 100%);
+    }
+
+    .ladder-page__content,
+    .match-card,
+    .stat-card {
+      background-color: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+    }
+
+    .team-row:hover {
+      background-color: rgba(147, 51, 234, 0.1);
+    }
   }
 
-  @keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-4px); }
+  /* Accessibility improvements */
+  @media (prefers-reduced-motion: reduce) {
+    .ladder-page__spinner,
+    .team-row,
+    .form-badge,
+    .stat-card,
+    .match-card,
+    .position-change--up,
+    .position-change--down {
+      animation: none;
+      transition: none;
+    }
   }
 </style>
