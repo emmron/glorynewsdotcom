@@ -126,7 +126,7 @@
         </p>
       </header>
     </div>
-    
+
     <section class="ladder-page__section max-w-7xl mx-auto">
       <div class="ladder-page__content bg-white rounded-2xl shadow-sm p-8">
         {#if loading}
@@ -140,7 +140,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
             </svg>
             <p class="text-lg font-medium mb-2">{error}</p>
-            <button 
+            <button
               class="mt-4 px-6 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-all duration-300"
               on:click={handleRetry}
             >
@@ -180,7 +180,7 @@
                 </button>
               </div>
             </div>
-            
+
             <div class="flex flex-wrap gap-4 items-center justify-between">
               <div class="flex items-center gap-4">
                 <button
@@ -223,9 +223,9 @@
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
                 {#each ladder.teams as team}
-                  <tr 
-                    class="hover:bg-purple-50 transition-colors duration-200 cursor-pointer {highlightedTeam === team.teamName ? 'bg-purple-50' : ''} 
-                          {isPlayoffPosition(team.position) ? 'border-l-4 border-l-green-500' : ''} 
+                  <tr
+                    class="hover:bg-purple-50 transition-colors duration-200 cursor-pointer {highlightedTeam === team.teamName ? 'bg-purple-50' : ''}
+                          {isPlayoffPosition(team.position) ? 'border-l-4 border-l-green-500' : ''}
                           {isRelegationPosition(team.position, ladder.teams.length) ? 'border-l-4 border-l-red-500' : ''}"
                     on:click={() => toggleTeamHighlight(team.teamName)}
                     in:slide|local={{ duration: 300 }}
@@ -236,7 +236,7 @@
                         {#if showChanges}
                           {@const change = getPositionChange(team)}
                           {#if change !== null}
-                            <span 
+                            <span
                               class="text-xs font-medium {change < 0 ? 'text-green-600' : change > 0 ? 'text-red-600' : 'text-gray-400'}"
                               in:scale
                             >
@@ -249,10 +249,10 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       <div class="flex items-center">
-                        <img 
-                          src={team.logo} 
-                          alt={team.teamName} 
-                          class="h-8 w-8 mr-3 rounded-full shadow-sm transition-transform duration-300 hover:scale-110" 
+                        <img
+                          src={team.logo}
+                          alt={team.teamName}
+                          class="h-8 w-8 mr-3 rounded-full shadow-sm transition-transform duration-300 hover:scale-110"
                         />
                         <span class="text-sm font-medium text-gray-900">{team.teamName}</span>
                       </div>
@@ -324,11 +324,14 @@
   }
 
   :global(.form-checkbox) {
-    @apply rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50;
+    @apply rounded border-gray-300 text-purple-600 shadow-sm
+           focus:border-purple-300 focus:ring
+           focus:ring-purple-200 focus:ring-opacity-50;
   }
 
   :global(.form-select) {
-    @apply rounded-md border-gray-300 focus:border-purple-500 focus:ring-purple-500;
+    @apply rounded-md border-gray-300
+           focus:border-purple-500 focus:ring-purple-500;
   }
 
   /* Custom scrollbar styles */
