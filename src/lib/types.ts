@@ -31,7 +31,8 @@ export interface WordPressPost {
  * Team statistics in the league ladder
  */
 export interface TeamStats {
-  teamName: string;
+  id: string;
+  name: string;
   position: number;
   played: number;
   won: number;
@@ -41,8 +42,10 @@ export interface TeamStats {
   goalsAgainst: number;
   goalDifference: number;
   points: number;
-  form: string[]; // Array of W, L, D representing recent results
-  logo: string;
+  form: string[]; // 'W', 'L', 'D' for last 5 matches
+  previousPosition?: number;
+  logo?: string;
+  isPerthGlory?: boolean;
 }
 
 /**
@@ -53,6 +56,11 @@ export interface LeagueLadder {
   lastUpdated: string;
   leagueName: string;
   season: string;
+  source?: {
+    name: string;
+    url: string;
+    author: string;
+  };
 }
 
 /**
