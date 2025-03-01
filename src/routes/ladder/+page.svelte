@@ -324,14 +324,28 @@
   }
 
   :global(.form-checkbox) {
-    @apply rounded border-gray-300;
-    @apply text-purple-600 shadow-sm;
-    @apply focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50;
+    border-radius: 0.25rem;
+    border-color: #d1d5db;
+    color: #9333ea;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+
+  :global(.form-checkbox:focus) {
+    border-color: #d8b4fe;
+    outline: none;
+    box-shadow: 0 0 0 2px #ddd6fe;
+    ring-opacity: 0.5;
   }
 
   :global(.form-select) {
-    @apply rounded-md border-gray-300;
-    @apply focus:border-purple-500 focus:ring-purple-500;
+    border-radius: 0.375rem;
+    border-color: #d1d5db;
+  }
+
+  :global(.form-select:focus) {
+    border-color: #a855f7;
+    outline: none;
+    box-shadow: 0 0 0 2px #a855f7;
   }
 
   /* Custom scrollbar styles */
