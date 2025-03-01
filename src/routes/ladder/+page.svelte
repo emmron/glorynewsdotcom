@@ -19,26 +19,33 @@
   let showChanges = false;
   let loadingRefresh = false;
   let retryCount = 0;
+  let lastRefreshAttempt = 0;
   const MAX_RETRIES = 3;
   const RETRY_DELAY = 2000; // 2 seconds delay between retries
+  const MIN_REFRESH_INTERVAL = 30000; // 30 seconds minimum between refreshes
+
+  // Performance optimization: Memoize sorted and filtered teams
+  $: sortedTeams = ladder?.teams.sort((a, b) => {
+    if (selectedStat === 'points') {
+      return b.points - a.points || b.goalDifference - a.goalDifference;
+    }
+    return b[selectedStat] - a[selectedStat];
+  }) ?? [];
 
   // Sync the data from the load function with better error handling
   $: {
     if (data) {
       if (data.error) {
-        // Handle error passed from server load function
         error = data.error.message || 'Failed to load data from server';
         console.error('Server data error:', data.error);
       } else {
-        // Clear error if we successfully got data
         error = '';
         previousLadder = ladder;
         ladder = data.ladder || null;
 
-        // If we got new data and had previous data, show the changes
         if (ladder && previousLadder && ladder !== previousLadder) {
           showChanges = true;
-          setTimeout(() => { showChanges = false; }, 5000); // Hide changes after 5 seconds
+          setTimeout(() => { showChanges = false; }, 5000);
         }
       }
     }
@@ -47,7 +54,7 @@
   // Get the matches data with improved error handling
   $: matches = data?.matches || null;
 
-  // Auto-refresh every 5 minutes if enabled with exponential backoff
+  // Auto-refresh with rate limiting
   $: if (autoRefreshEnabled && !refreshInterval) {
     refreshInterval = setInterval(handleRefresh, 5 * 60 * 1000);
   } else if (!autoRefreshEnabled && refreshInterval) {
@@ -56,13 +63,22 @@
   }
 
   onMount(() => {
-    // If no data loaded initially, try to load it
     if (!data?.ladder && !loading && !error) {
       handleRetry();
     }
 
+    // Add keyboard shortcuts
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'r' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        handleRefresh();
+      }
+    };
+    window.addEventListener('keydown', handleKeyPress);
+
     return () => {
       if (refreshInterval) clearInterval(refreshInterval);
+      window.removeEventListener('keydown', handleKeyPress);
     };
   });
 
@@ -71,14 +87,18 @@
   });
 
   const handleRefresh = async () => {
+    const now = Date.now();
+    if (now - lastRefreshAttempt < MIN_REFRESH_INTERVAL) {
+      console.log('Refresh rate limited. Please wait before trying again.');
+      return;
+    }
+
     try {
       loadingRefresh = true;
+      lastRefreshAttempt = now;
       previousLadder = ladder;
 
-      // Use invalidateAll to refresh all data
       await invalidateAll();
-
-      // Reset retry count on successful refresh
       retryCount = 0;
     } catch (e) {
       console.error('Error in auto-refresh:', e);
@@ -261,6 +281,49 @@
 
     return { type, count };
   };
+
+  // Add new helper functions for improved UX
+  const getTeamTrend = (team: TeamStats): 'up' | 'down' | 'neutral' => {
+    if (!team.form || team.form.length < 2) return 'neutral';
+
+    const recentResults = team.form.slice(0, 2);
+    const points = recentResults.reduce((acc, result) => {
+      if (result.toLowerCase() === 'w') return acc + 3;
+      if (result.toLowerCase() === 'd') return acc + 1;
+      return acc;
+    }, 0);
+
+    if (points >= 4) return 'up';
+    if (points === 0) return 'down';
+    return 'neutral';
+  };
+
+  const getTeamStreak = (team: TeamStats): string => {
+    if (!team.form || team.form.length === 0) return '';
+
+    let count = 1;
+    const current = team.form[0].toLowerCase();
+
+    for (let i = 1; i < team.form.length; i++) {
+      if (team.form[i].toLowerCase() === current) {
+        count++;
+      } else {
+        break;
+      }
+    }
+
+    const type = current === 'w' ? 'win' : current === 'l' ? 'loss' : 'draw';
+    return `${count} ${type}${count > 1 ? 's' : ''} in a row`;
+  };
+
+  const getTeamPerformanceClass = (team: TeamStats): string => {
+    const trend = getTeamTrend(team);
+    return trend === 'up'
+      ? 'bg-green-50 hover:bg-green-100'
+      : trend === 'down'
+        ? 'bg-red-50 hover:bg-red-100'
+        : 'hover:bg-purple-50';
+  };
 </script>
 
 <svelte:head>
@@ -382,7 +445,7 @@
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
-                {#each ladder.teams as team}
+                {#each sortedTeams as team}
                   <tr
                     class="hover:bg-purple-50 transition-colors duration-200 cursor-pointer {highlightedTeam === team.teamName ? 'bg-purple-50' : ''}
                           {isPlayoffPosition(team.position) ? 'border-l-4 border-l-green-500' : ''}
@@ -768,5 +831,44 @@
 
   .result-card:hover {
     transform: translateY(-2px);
+  }
+
+  /* Add new styles for improved visual feedback */
+  .team-row {
+    transition: all 0.2s ease-in-out;
+  }
+
+  .team-row:hover {
+    transform: translateX(4px);
+  }
+
+  .stat-value {
+    transition: all 0.3s ease-in-out;
+  }
+
+  .stat-value:hover {
+    transform: scale(1.1);
+  }
+
+  /* Add responsive design improvements */
+  @media (max-width: 640px) {
+    .ladder-table {
+      font-size: 0.875rem;
+    }
+
+    .ladder-table th,
+    .ladder-table td {
+      padding: 0.5rem;
+    }
+  }
+
+  /* Add animation for position changes */
+  .position-change {
+    animation: bounce 0.5s ease-in-out;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
   }
 </style>
