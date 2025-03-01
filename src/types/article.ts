@@ -1,20 +1,12 @@
 export interface Article {
+  id: string;
   title: string;
-  slug: string;
   content: string;
-  excerpt?: string;
-  author?: string;
-  publishDate: Date;
-  categories?: string[];
-  tags?: string[];
-  featuredImage?: string;
-  status: 'draft' | 'published';
-  readTime?: number;
-  lastModified?: Date;
-  imageBlurHash?: string;
-  relatedArticles?: string[];
+  summary: string;
+  date: string;
+  imageUrl: string;
+  category: string;
+  source?: string;
   sourceUrl?: string;
-  sourceName?: string;
-  scrapedAt?: Date;
-  isScraped?: boolean;
-} 
+  author?: string;
+}

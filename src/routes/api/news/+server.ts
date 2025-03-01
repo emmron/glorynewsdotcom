@@ -1,58 +1,44 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { fetchGloryNews } from '$lib/services/newsService';
-import { Redis } from '@upstash/redis';
+import { NewsFetcher } from '$lib/services/newsFetcher';
+import type { Article } from '$lib/types/news';
 
-const REDIS_URL = process.env.UPSTASH_REDIS_URL || '';
-const REDIS_TOKEN = process.env.UPSTASH_REDIS_TOKEN || '';
+// Convert our Article type to the format expected by the frontend
+function transformArticleForResponse(article: Article) {
+  return {
+    id: article.id,
+    title: article.title,
+    content: article.content,
+    summary: article.content.replace(/<[^>]+>/g, '').substring(0, 200) + '...',
+    date: article.publishDate.toISOString(),
+    imageUrl: article.images.featured || '/images/default-news.jpg',
+    category: article.categories[0] || 'News'
+  };
+}
 
 export const GET: RequestHandler = async () => {
   try {
-    // Try to get news from Redis first
-    const redis = new Redis({
-      url: REDIS_URL,
-      token: REDIS_TOKEN
-    });
+    const newsFetcher = new NewsFetcher();
 
-    let articles = await redis.get('latest_news');
-    const lastUpdated = await redis.get('news_last_updated');
+    // Get all articles
+    const articles = await newsFetcher.getAllArticles();
 
-    // If not in Redis or data is too old, fetch fresh news
-    if (!articles || !Array.isArray(articles) || articles.length === 0) {
-      articles = await fetchGloryNews();
-
-      // Store in Redis for future requests
-      await redis.set('latest_news', articles);
-      await redis.set('news_last_updated', new Date().toISOString());
-    }
+    // Transform for response
+    const transformedArticles = articles.map(transformArticleForResponse);
 
     return json({
       success: true,
-      articles,
-      count: articles.length,
-      lastUpdated,
+      articles: transformedArticles,
+      count: transformedArticles.length,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
     console.error('Error fetching news:', error);
 
-    // Attempt to fetch news directly as fallback
-    try {
-      const articles = await fetchGloryNews();
-      return json({
-        success: true,
-        articles,
-        count: articles.length,
-        fromFallback: true,
-        timestamp: new Date().toISOString()
-      });
-    } catch (fallbackError) {
-      console.error('Fallback also failed:', fallbackError);
-      return json({
-        success: false,
-        error: 'Failed to fetch news',
-        timestamp: new Date().toISOString()
-      }, { status: 500 });
-    }
+    return json({
+      success: false,
+      error: 'Failed to fetch news',
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
   }
 };

@@ -1,11 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { fetchGloryNews } from '$lib/services/newsService';
-import { Redis } from '@upstash/redis';
+import { NewsFetcher } from '$lib/services/newsFetcher';
 
 const CRON_SECRET = process.env.CRON_SECRET;
-const REDIS_URL = process.env.UPSTASH_REDIS_URL || '';
-const REDIS_TOKEN = process.env.UPSTASH_REDIS_TOKEN || '';
 
 export const GET: RequestHandler = async ({ request }) => {
   // Verify cron secret
@@ -14,24 +11,32 @@ export const GET: RequestHandler = async ({ request }) => {
     return json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const redis = new Redis({
-    url: REDIS_URL,
-    token: REDIS_TOKEN
-  });
-
   const startTime = Date.now();
 
   try {
-    // Fetch fresh news
-    const articles = await fetchGloryNews();
+    // Use our new news fetcher to refresh all sources
+    const newsFetcher = new NewsFetcher();
 
-    // Store in Redis
-    await redis.set('latest_news', articles);
-    await redis.set('news_last_updated', new Date().toISOString());
+    // Clear the cache to ensure we get fresh data
+    await newsFetcher.clearCache();
+
+    // Fetch all articles from all sources
+    const sourceArticles = await newsFetcher.fetchAllSources();
+
+    // Count total articles
+    const totalArticles = Object.values(sourceArticles)
+      .reduce((sum, articles) => sum + articles.length, 0);
+
+    // Metrics by source
+    const sourceMetrics = Object.entries(sourceArticles).map(([source, articles]) => ({
+      source,
+      count: articles.length
+    }));
 
     return json({
       success: true,
-      count: articles.length,
+      count: totalArticles,
+      sources: sourceMetrics,
       duration: Date.now() - startTime,
       timestamp: new Date().toISOString()
     });
