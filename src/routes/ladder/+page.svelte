@@ -18,22 +18,36 @@
   let previousLadder: LeagueLadder | null = null;
   let showChanges = false;
   let loadingRefresh = false;
+  let retryCount = 0;
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 2000; // 2 seconds delay between retries
 
-  // Sync the data from the load function
+  // Sync the data from the load function with better error handling
   $: {
-    ladder = data.ladder || null;
+    if (data) {
+      if (data.error) {
+        // Handle error passed from server load function
+        error = data.error.message || 'Failed to load data from server';
+        console.error('Server data error:', data.error);
+      } else {
+        // Clear error if we successfully got data
+        error = '';
+        previousLadder = ladder;
+        ladder = data.ladder || null;
 
-    // If we got new data and had previous data, show the changes
-    if (ladder && previousLadder && ladder !== previousLadder) {
-      showChanges = true;
-      setTimeout(() => { showChanges = false; }, 5000); // Hide changes after 5 seconds
+        // If we got new data and had previous data, show the changes
+        if (ladder && previousLadder && ladder !== previousLadder) {
+          showChanges = true;
+          setTimeout(() => { showChanges = false; }, 5000); // Hide changes after 5 seconds
+        }
+      }
     }
   }
 
-  // Get the matches data
-  $: matches = data.matches || null;
+  // Get the matches data with improved error handling
+  $: matches = data?.matches || null;
 
-  // Auto-refresh every 5 minutes if enabled
+  // Auto-refresh every 5 minutes if enabled with exponential backoff
   $: if (autoRefreshEnabled && !refreshInterval) {
     refreshInterval = setInterval(handleRefresh, 5 * 60 * 1000);
   } else if (!autoRefreshEnabled && refreshInterval) {
@@ -42,7 +56,11 @@
   }
 
   onMount(() => {
-    // No need to fetch data on mount, it's already loaded via SvelteKit's load function
+    // If no data loaded initially, try to load it
+    if (!data?.ladder && !loading && !error) {
+      handleRetry();
+    }
+
     return () => {
       if (refreshInterval) clearInterval(refreshInterval);
     };
@@ -59,20 +77,40 @@
 
       // Use invalidateAll to refresh all data
       await invalidateAll();
+
+      // Reset retry count on successful refresh
+      retryCount = 0;
     } catch (e) {
       console.error('Error in auto-refresh:', e);
+      handleRefreshError(e);
     } finally {
       loadingRefresh = false;
+    }
+  };
+
+  const handleRefreshError = (e: unknown) => {
+    const errorMessage = e instanceof Error ? e.message : 'Failed to refresh data';
+    error = errorMessage;
+
+    // Implement exponential backoff for retries
+    if (retryCount < MAX_RETRIES) {
+      retryCount++;
+      const backoffDelay = RETRY_DELAY * Math.pow(2, retryCount - 1);
+      console.log(`Retrying in ${backoffDelay / 1000}s (attempt ${retryCount}/${MAX_RETRIES})`);
+
+      setTimeout(() => {
+        handleRetry();
+      }, backoffDelay);
     }
   };
 
   const handleRetry = async () => {
     try {
       loading = true;
+      error = '';
 
       // Use invalidateAll to refresh all data
       await invalidateAll();
-      error = '';
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load ladder';
       console.error('Error in handleRetry:', e);
