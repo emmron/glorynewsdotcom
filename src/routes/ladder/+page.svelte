@@ -18,19 +18,36 @@
   let previousLadder: LeagueLadder | null = null;
   let showChanges = false;
   let loadingRefresh = false;
+  let retryCount = 0;
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 2000; // 2 seconds delay between retries
 
-  // Sync the data from the load function
+  // Sync the data from the load function with better error handling
   $: {
-    ladder = data.ladder || null;
+    if (data) {
+      if (data.error) {
+        // Handle error passed from server load function
+        error = data.error.message || 'Failed to load data from server';
+        console.error('Server data error:', data.error);
+      } else {
+        // Clear error if we successfully got data
+        error = '';
+        previousLadder = ladder;
+        ladder = data.ladder || null;
 
-    // If we got new data and had previous data, show the changes
-    if (ladder && previousLadder && ladder !== previousLadder) {
-      showChanges = true;
-      setTimeout(() => { showChanges = false; }, 5000); // Hide changes after 5 seconds
+        // If we got new data and had previous data, show the changes
+        if (ladder && previousLadder && ladder !== previousLadder) {
+          showChanges = true;
+          setTimeout(() => { showChanges = false; }, 5000); // Hide changes after 5 seconds
+        }
+      }
     }
   }
 
-  // Auto-refresh every 5 minutes if enabled
+  // Get the matches data with improved error handling
+  $: matches = data?.matches || null;
+
+  // Auto-refresh every 5 minutes if enabled with exponential backoff
   $: if (autoRefreshEnabled && !refreshInterval) {
     refreshInterval = setInterval(handleRefresh, 5 * 60 * 1000);
   } else if (!autoRefreshEnabled && refreshInterval) {
@@ -39,7 +56,11 @@
   }
 
   onMount(() => {
-    // No need to fetch data on mount, it's already loaded via SvelteKit's load function
+    // If no data loaded initially, try to load it
+    if (!data?.ladder && !loading && !error) {
+      handleRetry();
+    }
+
     return () => {
       if (refreshInterval) clearInterval(refreshInterval);
     };
@@ -56,20 +77,40 @@
 
       // Use invalidateAll to refresh all data
       await invalidateAll();
+
+      // Reset retry count on successful refresh
+      retryCount = 0;
     } catch (e) {
       console.error('Error in auto-refresh:', e);
+      handleRefreshError(e);
     } finally {
       loadingRefresh = false;
+    }
+  };
+
+  const handleRefreshError = (e: unknown) => {
+    const errorMessage = e instanceof Error ? e.message : 'Failed to refresh data';
+    error = errorMessage;
+
+    // Implement exponential backoff for retries
+    if (retryCount < MAX_RETRIES) {
+      retryCount++;
+      const backoffDelay = RETRY_DELAY * Math.pow(2, retryCount - 1);
+      console.log(`Retrying in ${backoffDelay / 1000}s (attempt ${retryCount}/${MAX_RETRIES})`);
+
+      setTimeout(() => {
+        handleRetry();
+      }, backoffDelay);
     }
   };
 
   const handleRetry = async () => {
     try {
       loading = true;
+      error = '';
 
       // Use invalidateAll to refresh all data
       await invalidateAll();
-      error = '';
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load ladder';
       console.error('Error in handleRetry:', e);
@@ -119,6 +160,107 @@
   const formatStat = (stat: string) => {
     return stat.replace(/([A-Z])/g, ' $1').toLowerCase();
   };
+
+  const formatMatchDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      if (date.toDateString() === now.toDateString()) {
+        return 'Today, ' + date.toLocaleTimeString('en-AU', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+      } else if (date.toDateString() === tomorrow.toDateString()) {
+        return 'Tomorrow, ' + date.toLocaleTimeString('en-AU', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+      }
+
+      return date.toLocaleDateString('en-AU', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch (e) {
+      console.error('Error formatting date:', e);
+      return dateString;
+    }
+  };
+
+  const getMatchResultClass = (homeScore: number, awayScore: number, teamName: string) => {
+    if (!homeScore && !awayScore) return 'text-gray-500'; // Not played yet
+    const isHomeTeam = teamName.includes('Perth Glory');
+    const teamScore = isHomeTeam ? homeScore : awayScore;
+    const oppositionScore = isHomeTeam ? awayScore : homeScore;
+
+    if (teamScore > oppositionScore) return 'text-green-600 font-bold';
+    if (teamScore < oppositionScore) return 'text-red-600';
+    return 'text-gray-600'; // Draw
+  };
+
+  const shortenTeamName = (name: string) => {
+    return name
+      .replace(' FC', '')
+      .replace(' United', ' Utd')
+      .replace('Western Sydney Wanderers', 'WS Wanderers')
+      .replace('Melbourne City', 'Melb City')
+      .replace('Brisbane Roar', 'Brisbane');
+  };
+
+  // Add statistics for the highlighted team
+  $: highlightedTeamStats = highlightedTeam
+    ? ladder?.teams.find(team => team.teamName === highlightedTeam)
+    : null;
+
+  // Get team's recent matches
+  $: teamRecentMatches = highlightedTeam && matches
+    ? matches.matches.filter(match =>
+        match.homeTeam.name.includes(highlightedTeam) ||
+        match.awayTeam.name.includes(highlightedTeam)
+      ).slice(0, 5)
+    : [];
+
+  // Calculate team form statistics
+  $: teamFormStats = highlightedTeamStats
+    ? {
+        winPercentage: (highlightedTeamStats.won / highlightedTeamStats.played * 100).toFixed(1),
+        avgGoalsScored: (highlightedTeamStats.goalsFor / highlightedTeamStats.played).toFixed(1),
+        avgGoalsConceded: (highlightedTeamStats.goalsAgainst / highlightedTeamStats.played).toFixed(1),
+        cleanSheets: highlightedTeamStats.form.filter(result => result.toLowerCase() === 'w' && highlightedTeamStats.goalsAgainst === 0).length,
+        streak: getStreakInfo(highlightedTeamStats.form)
+      }
+    : null;
+
+  const getStreakInfo = (form: string[]) => {
+    if (!form || form.length === 0) return { type: 'none', count: 0 };
+
+    let count = 1;
+    const current = form[0].toLowerCase();
+
+    for (let i = 1; i < form.length; i++) {
+      if (form[i].toLowerCase() === current) {
+        count++;
+      } else {
+        break;
+      }
+    }
+
+    let type = 'none';
+    if (current === 'w') type = 'win';
+    else if (current === 'l') type = 'loss';
+    else if (current === 'd') type = 'draw';
+
+    return { type, count };
+  };
 </script>
 
 <svelte:head>
@@ -140,7 +282,7 @@
     </div>
 
     <section class="ladder-page__section max-w-7xl mx-auto">
-      <div class="ladder-page__content bg-white rounded-2xl shadow-sm p-8">
+      <div class="ladder-page__content bg-white rounded-2xl shadow-sm p-8 mb-8">
         {#if loading}
           <div class="ladder-page__loader flex flex-col justify-center items-center h-64" in:fade>
             <div class="ladder-page__spinner animate-spin rounded-full h-12 w-12 border-4 border-purple-200 border-t-purple-600"></div>
@@ -319,6 +461,197 @@
           </div>
         {/if}
       </div>
+
+      <!-- Team Form Guide Section -->
+      {#if highlightedTeamStats && !loading && !error}
+        <div class="max-w-7xl mx-auto mb-8">
+          <div class="bg-white rounded-2xl shadow-sm p-8" in:fade={{ duration: 400 }}>
+            <h2 class="text-2xl font-bold text-purple-900 mb-6 flex items-center gap-3">
+              {#if highlightedTeamStats.logo}
+                <img
+                  src={highlightedTeamStats.logo}
+                  alt={highlightedTeamStats.teamName}
+                  class="h-10 w-10 rounded-full shadow-sm"
+                />
+              {/if}
+              {highlightedTeamStats.teamName} Form Guide
+            </h2>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <!-- Key Stats -->
+              <div class="stats-section rounded-xl bg-gray-50 p-5">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Key Statistics</h3>
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="stat-item">
+                    <div class="text-sm text-gray-500">Position</div>
+                    <div class="text-xl font-bold {getPositionStyle(highlightedTeamStats.position)}">
+                      {highlightedTeamStats.position}
+                      {#if isPlayoffPosition(highlightedTeamStats.position)}
+                        <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full ml-1">Playoff</span>
+                      {/if}
+                    </div>
+                  </div>
+
+                  <div class="stat-item">
+                    <div class="text-sm text-gray-500">Win Rate</div>
+                    <div class="text-xl font-bold text-gray-800">{teamFormStats?.winPercentage}%</div>
+                  </div>
+
+                  <div class="stat-item">
+                    <div class="text-sm text-gray-500">Goal Difference</div>
+                    <div class="text-xl font-bold {highlightedTeamStats.goalDifference > 0 ? 'text-green-600' : highlightedTeamStats.goalDifference < 0 ? 'text-red-600' : 'text-gray-800'}">
+                      {highlightedTeamStats.goalDifference > 0 ? '+' : ''}{highlightedTeamStats.goalDifference}
+                    </div>
+                  </div>
+
+                  <div class="stat-item">
+                    <div class="text-sm text-gray-500">Current Streak</div>
+                    <div class="text-xl font-bold {teamFormStats?.streak.type === 'win' ? 'text-green-600' : teamFormStats?.streak.type === 'loss' ? 'text-red-600' : 'text-gray-600'}">
+                      {teamFormStats?.streak.count} {teamFormStats?.streak.type}{teamFormStats && teamFormStats.streak.count !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+
+                  <div class="stat-item">
+                    <div class="text-sm text-gray-500">Avg Goals Scored</div>
+                    <div class="text-xl font-bold text-gray-800">{teamFormStats?.avgGoalsScored}</div>
+                  </div>
+
+                  <div class="stat-item">
+                    <div class="text-sm text-gray-500">Avg Goals Conceded</div>
+                    <div class="text-xl font-bold text-gray-800">{teamFormStats?.avgGoalsConceded}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Results Breakdown -->
+              <div class="results-section rounded-xl bg-gray-50 p-5">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Results Breakdown</h3>
+                <div class="grid grid-cols-3 gap-4 text-center mb-4">
+                  <div class="result-card bg-green-50 rounded-lg p-3">
+                    <div class="text-3xl font-bold text-green-700">{highlightedTeamStats.won}</div>
+                    <div class="text-sm text-gray-600">Wins</div>
+                  </div>
+
+                  <div class="result-card bg-gray-100 rounded-lg p-3">
+                    <div class="text-3xl font-bold text-gray-700">{highlightedTeamStats.drawn}</div>
+                    <div class="text-sm text-gray-600">Draws</div>
+                  </div>
+
+                  <div class="result-card bg-red-50 rounded-lg p-3">
+                    <div class="text-3xl font-bold text-red-700">{highlightedTeamStats.lost}</div>
+                    <div class="text-sm text-gray-600">Losses</div>
+                  </div>
+                </div>
+
+                <div class="form-visual mt-4">
+                  <div class="text-sm text-gray-600 mb-2">Last 5 Games</div>
+                  <div class="flex gap-2">
+                    {#each highlightedTeamStats.form as result}
+                      <div class="w-full h-14 flex items-center justify-center rounded-lg {result.toLowerCase() === 'w' ? 'bg-green-100' : result.toLowerCase() === 'l' ? 'bg-red-100' : 'bg-gray-100'}">
+                        <span class="text-lg font-bold {result.toLowerCase() === 'w' ? 'text-green-700' : result.toLowerCase() === 'l' ? 'text-red-700' : 'text-gray-700'}">
+                          {result.toUpperCase()}
+                        </span>
+                      </div>
+                    {/each}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Recent Matches -->
+              <div class="team-matches-section rounded-xl bg-gray-50 p-5">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Recent Matches</h3>
+                {#if teamRecentMatches.length > 0}
+                  <div class="flex flex-col gap-3">
+                    {#each teamRecentMatches as match}
+                      <div class="rounded-lg bg-white p-3 shadow-sm">
+                        <div class="text-xs text-gray-500 mb-1">{formatMatchDate(match.date)}</div>
+                        <div class="flex justify-between items-center">
+                          <span class="text-sm font-medium {getMatchResultClass(match.homeTeam.score, match.awayTeam.score, match.homeTeam.name)}">
+                            {shortenTeamName(match.homeTeam.name)}
+                          </span>
+                          {#if match.isCompleted}
+                            <span class="text-base font-bold text-gray-900 px-1.5">
+                              {match.homeTeam.score} - {match.awayTeam.score}
+                            </span>
+                          {:else}
+                            <span class="text-xs text-purple-600 font-medium">vs</span>
+                          {/if}
+                          <span class="text-sm font-medium {getMatchResultClass(match.homeTeam.score, match.awayTeam.score, match.awayTeam.name)}">
+                            {shortenTeamName(match.awayTeam.name)}
+                          </span>
+                        </div>
+                      </div>
+                    {/each}
+                  </div>
+                {:else}
+                  <div class="text-center text-gray-500 py-4">
+                    No recent matches found
+                  </div>
+                {/if}
+              </div>
+            </div>
+          </div>
+        </div>
+      {/if}
+
+      <!-- Recent Matches Section -->
+      {#if matches && !loading && !error}
+        <div class="max-w-7xl mx-auto mb-8">
+          <div class="bg-white rounded-2xl shadow-sm p-8" in:fade={{ duration: 700, delay: 300 }}>
+            <h2 class="text-2xl font-bold text-purple-900 mb-6">Recent & Upcoming Matches</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {#each matches.matches as match, i (match.date)}
+                <div
+                  class="match-card bg-gray-50 rounded-xl p-4 hover:bg-purple-50 transition-all duration-200 shadow-sm"
+                  in:fly|local={{ y: 20, duration: 300, delay: i * 100 }}
+                >
+                  <div class="flex flex-col gap-2">
+                    <div class="flex justify-between items-center">
+                      <span class="text-sm text-gray-500">
+                        {formatMatchDate(match.date)}
+                      </span>
+                      {#if !match.isCompleted}
+                        <span
+                          class="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium"
+                          in:slide|local={{ duration: 200 }}
+                        >
+                          Upcoming
+                        </span>
+                      {/if}
+                    </div>
+
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span class="text-sm font-medium {getMatchResultClass(match.homeTeam.score, match.awayTeam.score, match.homeTeam.name)}">
+                        {shortenTeamName(match.homeTeam.name)}
+                      </span>
+                      {#if match.isCompleted}
+                        <span class="text-lg font-bold text-gray-900 px-3">
+                          {match.homeTeam.score} - {match.awayTeam.score}
+                        </span>
+                      {:else}
+                        <span class="text-sm text-purple-600 font-medium">vs</span>
+                      {/if}
+                      <span class="text-sm font-medium {getMatchResultClass(match.homeTeam.score, match.awayTeam.score, match.awayTeam.name)}">
+                        {shortenTeamName(match.awayTeam.name)}
+                      </span>
+                    </div>
+
+                    <div class="text-xs text-gray-500 mt-1 flex justify-between">
+                      <span class="inline-block">{match.competition}</span>
+                      <span class="inline-block">{match.venue}</span>
+                    </div>
+                  </div>
+                </div>
+              {/each}
+            </div>
+
+            <div class="mt-4 text-right text-xs text-gray-500">
+              Last updated: {new Date(matches.lastUpdated).toLocaleString('en-AU')}
+            </div>
+          </div>
+        </div>
+      {/if}
     </section>
   </main>
 </div>
@@ -399,6 +732,17 @@
     transform: translateY(-2px);
   }
 
+  /* Match card styles */
+  .match-card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease-in-out;
+  }
+
+  .match-card:hover {
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+
   /* Responsive design improvements */
   @media (max-width: 640px) {
     .ladder-page__header-container {
@@ -408,5 +752,21 @@
     .ladder-page__content {
       padding: 1rem;
     }
+  }
+
+  /* Form guide styles */
+  .stat-item {
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    background-color: white;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .result-card {
+    transition: transform 0.2s ease-in-out;
+  }
+
+  .result-card:hover {
+    transform: translateY(-2px);
   }
 </style>

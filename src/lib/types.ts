@@ -27,44 +27,109 @@ export interface WordPressPost {
   };
 }
 
+/**
+ * Team statistics for the league ladder
+ */
 export interface TeamStats {
-    position: number;
-    teamName: string;
-    played: number;
-    won: number;
-    drawn: number;
-    lost: number;
-    goalsFor: number;
-    goalsAgainst: number;
-    goalDifference: number;
-    points: number;
-    form: string[];
-    logo: string;
+  position: number;
+  teamName: string;
+  logo: string;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+  points: number;
+  form: string[]; // Array of W, L, D representing recent results
 }
 
+/**
+ * League ladder containing team standings
+ */
 export interface LeagueLadder {
-    lastUpdated: string;
-    teams: TeamStats[];
+  teams: TeamStats[];
+  lastUpdated: string;
+  leagueName: string;
+  season: string;
 }
 
+/**
+ * Match information
+ */
 export interface Match {
-    date: string;
-    competition: string;
-    homeTeam: {
-        name: string;
-        score: number;
-    };
-    awayTeam: {
-        name: string;
-        score: number;
-    };
-    venue: string;
-    isCompleted: boolean;
+  id: string;
+  date: string;
+  competition: string;
+  venue: string;
+  isCompleted: boolean;
+  homeTeam: {
+    name: string;
+    logo?: string;
+    score: number;
+  };
+  awayTeam: {
+    name: string;
+    logo?: string;
+    score: number;
+  };
 }
 
-export interface RecentMatches {
-    lastUpdated: string;
-    matches: Match[];
+/**
+ * Collection of matches
+ */
+export interface Matches {
+  matches: Match[];
+  lastUpdated: string;
+}
+
+/**
+ * API error response
+ */
+export interface ApiError {
+  message: string;
+  status: number;
+  details?: unknown;
+}
+
+/**
+ * Logger interface for error tracking
+ */
+export interface ErrorLog {
+  timestamp: Date;
+  source: string;
+  errorType: 'network' | 'parsing' | 'validation';
+  message: string;
+  stackTrace?: string;
+  context: {
+    url?: string;
+    responseCode?: number;
+    payload?: unknown;
+  };
+}
+
+/**
+ * Article structure for news content
+ */
+export interface Article {
+  id: string;
+  title: string;
+  content: string;
+  publishDate: Date;
+  sourceUrl: string;
+  author?: string;
+  images: {
+    featured?: string;
+    gallery?: string[];
+  };
+  categories: string[];
+  tags: string[];
+  metadata: {
+    wordCount: number;
+    readingTime: number;
+    isSponsored: boolean;
+  };
 }
 
 export interface NewsArticle {
@@ -112,7 +177,7 @@ export interface NewsArticle {
 
   // Related Content
   relatedArticles?: string[];
-  
+
   // Comments
   commentsEnabled: boolean;
   commentCount: number;
@@ -137,14 +202,4 @@ export interface NewsSource {
     title: string;
     content: string;
   };
-}
-
-export interface Article {
-  id: string;
-  title: string;
-  content: string;
-  url: string;
-  publishDate: Date;
-  source: string;
-  imageUrl?: string;
 }
