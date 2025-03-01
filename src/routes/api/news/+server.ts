@@ -1,18 +1,35 @@
 import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
+import type { RequestHandler } from '@sveltejs/kit';
 import { NewsFetcher } from '$lib/services/newsFetcher';
 import type { Article } from '$lib/types/news';
 
 // Convert our Article type to the format expected by the frontend
 function transformArticleForResponse(article: Article) {
+  // Make sure we handle dates properly
+  const publishDate = article.publishDate instanceof Date
+    ? article.publishDate
+    : new Date(article.publishDate);
+
   return {
     id: article.id,
     title: article.title,
     content: article.content,
     summary: article.content.replace(/<[^>]+>/g, '').substring(0, 200) + '...',
-    date: article.publishDate.toISOString(),
+    date: publishDate.toISOString(),
     imageUrl: article.images.featured || '/images/default-news.jpg',
-    category: article.categories[0] || 'News'
+    category: article.categories[0] || 'News',
+
+    // Add these fields to match what the frontend expects
+    slug: article.id, // Use ID as slug
+    excerpt: article.content.replace(/<[^>]+>/g, '').substring(0, 200) + '...',
+    publishDate: publishDate.toISOString(),
+    featuredImage: article.images.featured || '/images/default-news.jpg',
+    sourceName: 'Perth Glory',
+    author: article.author || 'Perth Glory',
+
+    // Optional fields
+    source: 'Perth Glory',
+    sourceUrl: article.sourceUrl
   };
 }
 

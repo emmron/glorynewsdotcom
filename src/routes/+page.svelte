@@ -3,62 +3,38 @@
   import { format } from 'date-fns';
   import type { Article } from '../types/article';
   import { fade, fly } from 'svelte/transition';
+  import { invalidateAll } from '$app/navigation';
 
-  interface NewsResponse {
-    success: boolean;
-    articles: Article[];
-    error?: string;
-  }
+  // Get data from server-side load function
+  export let data;
 
   let articles: Article[] = [];
-  let loading = true;
+  let loading = false;
   let error: string | null = null;
-  let retryCount = 0;
-  const MAX_RETRIES = 3;
   let refreshInterval: ReturnType<typeof setInterval> | null = null;
   let lastRefreshed: Date | null = null;
   let isAutoRefreshing = true;
   let loadingRefresh = false;
 
-  async function fetchNews(retry = 0, isRefresh = false): Promise<void> {
-    if (isRefresh) {
-      loadingRefresh = true;
-    } else {
-      loading = true;
+  // Sync data from load function
+  $: {
+    articles = data.articles || [];
+
+    // If we have articles, update lastRefreshed
+    if (articles.length > 0 && !lastRefreshed) {
+      lastRefreshed = new Date();
     }
+  }
 
+  async function refreshData(): Promise<void> {
+    loadingRefresh = true;
     try {
-      const response = await fetch('/api/news', {
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: NewsResponse = await response.json();
-
-      if (data.success && Array.isArray(data.articles)) {
-        articles = data.articles;
-        lastRefreshed = new Date();
-        error = null;
-      } else {
-        throw new Error(data.error || 'Invalid response format');
-      }
+      // Use invalidateAll to refresh all data
+      await invalidateAll();
+      lastRefreshed = new Date();
     } catch (e) {
-      console.error('Error fetching news:', e);
-      error = e instanceof Error ? e.message : 'Failed to load articles';
-
-      // Implement retry logic
-      if (retry < MAX_RETRIES) {
-        retryCount = retry + 1;
-        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retry)));
-        await fetchNews(retry + 1, isRefresh);
-      }
+      console.error('Error refreshing news:', e);
     } finally {
-      loading = false;
       loadingRefresh = false;
     }
   }
@@ -70,7 +46,7 @@
     isAutoRefreshing = true;
 
     refreshInterval = setInterval(() => {
-      fetchNews(0, true);
+      refreshData();
     }, REFRESH_INTERVAL);
   }
 
@@ -91,7 +67,6 @@
   }
 
   onMount(() => {
-    fetchNews();
     startAutoRefresh();
   });
 
@@ -101,8 +76,15 @@
 
   function formatDate(date: string | Date): string {
     try {
-      return format(new Date(date), 'MMM d, yyyy');
-    } catch {
+      if (typeof date === 'string') {
+        return format(new Date(date), 'MMM d, yyyy');
+      } else if (date instanceof Date) {
+        return format(date, 'MMM d, yyyy');
+      } else {
+        return 'Date unavailable';
+      }
+    } catch (error) {
+      console.error('Error formatting date:', error);
       return 'Date unavailable';
     }
   }
@@ -149,7 +131,7 @@
       {/if}
       <button
         class="px-4 py-2 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-        on:click={() => fetchNews(0, true)}
+        on:click={refreshData}
         disabled={loading || loadingRefresh}
       >
         {#if loadingRefresh}
@@ -165,7 +147,7 @@
         in:fade
       >
         <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-900"></div>
-        <p class="mt-4 text-purple-700">Loading latest news{'.'.repeat(retryCount + 1)}</p>
+        <p class="mt-4 text-purple-700">Loading latest news...</p>
       </div>
     {:else if error}
       <div
@@ -182,7 +164,7 @@
         </div>
         <button
           class="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-          on:click={() => { error = null; fetchNews(); }}
+          on:click={refreshData}
         >
           Retry
         </button>
@@ -217,8 +199,8 @@
 
             <div class="p-6 flex-grow flex flex-col">
               <div class="flex items-center text-sm text-gray-500 mb-2">
-                <time datetime={new Date(article.publishDate).toISOString()}>
-                  {formatDate(article.publishDate)}
+                <time datetime={article.date}>
+                  {formatDate(article.date)}
                 </time>
                 {#if article.sourceName}
                   <span class="mx-2">·</span>
