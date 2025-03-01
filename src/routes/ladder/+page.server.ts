@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { LeagueLadder, TeamStats, Matches } from '$lib/types';
 import { LEAGUE_API_ENDPOINT } from '$lib/config';
+import { fetchRecentMatches } from '$lib/services/matchService';
 
 // Implementation follows the news fetching rules for rate limiting and caching
 const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
@@ -72,6 +73,22 @@ async function fetchLadder(): Promise<LeagueLadder> {
       console.warn('Returning stale ladder data due to fetch error:', err);
       return cachedLadder.data;
     }
+
+    // Fallback to local data
+    try {
+      const response = await fetch('/data/ladder.json');
+      if (response.ok) {
+        const data = await response.json();
+        cachedLadder = {
+          data,
+          timestamp: now
+        };
+        return data;
+      }
+    } catch (fallbackErr) {
+      console.error('Failed to load fallback ladder data:', fallbackErr);
+    }
+
     throw err;
   }
 }
@@ -107,6 +124,19 @@ async function fetchMatches(): Promise<Matches> {
       console.warn('Returning stale matches data due to fetch error:', err);
       return cachedMatches.data;
     }
+
+    // Fallback to local data using matchService
+    try {
+      const data = await fetchRecentMatches();
+      cachedMatches = {
+        data,
+        timestamp: now
+      };
+      return data;
+    } catch (fallbackErr) {
+      console.error('Failed to load fallback matches data:', fallbackErr);
+    }
+
     throw err;
   }
 }
