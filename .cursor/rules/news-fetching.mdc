@@ -1,7 +1,7 @@
 ---
 description: Rules for news fetching and content aggregation
 globs: ["src/lib/news-fetching.ts", "src/routes/api/news/*"]
-alwaysApply: false
+alwaysApply: true
 ---
 
 # News Fetching Rules
