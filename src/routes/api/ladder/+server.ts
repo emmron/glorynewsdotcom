@@ -1,5 +1,7 @@
 import type { RequestEvent } from '@sveltejs/kit';
 import type { LeagueLadder, TeamStats } from '$lib/types';
+import axios from 'axios';
+import { LEAGUE_API_ENDPOINT, CACHE_DURATIONS, API_RATE_LIMIT, RETRY_STRATEGY } from '$lib/config';
 
 // In-memory cache with stale-while-revalidate pattern
 interface CacheEntry {
@@ -9,12 +11,12 @@ interface CacheEntry {
 }
 
 let ladderCache: CacheEntry | null = null;
-const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes as per rules
+const CACHE_DURATION = CACHE_DURATIONS.ladder;
 const STALE_WHILE_REVALIDATE = 60 * 60 * 1000; // 1 hour
 
 // Rate limiting
-const RATE_LIMIT_WINDOW = 10000; // 10 seconds
-const MAX_REQUESTS_PER_WINDOW = 2;
+const RATE_LIMIT_WINDOW = API_RATE_LIMIT.windowMs;
+const MAX_REQUESTS_PER_WINDOW = API_RATE_LIMIT.requestsPerWindow;
 let requestTimestamps: number[] = [];
 
 function checkRateLimit(): boolean {
@@ -32,78 +34,35 @@ function checkRateLimit(): boolean {
 }
 
 async function fetchLadderData(): Promise<LeagueLadder> {
-    // In a real implementation, this would fetch from an external API
-    // For now, we'll use mock data but structure it for easy replacement
-    const initialTeams: Omit<TeamStats, 'position'>[] = [
-        {
-            teamName: "Central Coast Mariners",
-            played: 10,
-            won: 7,
-            drawn: 2,
-            lost: 1,
-            goalsFor: 16,
-            goalsAgainst: 8,
-            goalDifference: 8,
-            points: 23,
-            form: ["W", "D", "L", "W", "D"],
-            logo: ""
-        },
-        {
-            teamName: "Melbourne City",
-            played: 11,
-            won: 6,
-            drawn: 3,
-            lost: 2,
-            goalsFor: 20,
-            goalsAgainst: 10,
-            goalDifference: 10,
-            points: 21,
-            form: ["D", "D", "D", "W", "W"],
-            logo: ""
-        },
-        {
-            teamName: "Adelaide United",
-            played: 10,
-            won: 6,
-            drawn: 3,
-            lost: 1,
-            goalsFor: 24,
-            goalsAgainst: 16,
-            goalDifference: 8,
-            points: 21,
-            form: ["W", "W", "D", "L", "W"],
-            logo: ""
-        },
-        {
-            teamName: "Brisbane Roar",
-            played: 11,
-            won: 0,
-            drawn: 2,
-            lost: 9,
-            goalsFor: 12,
-            goalsAgainst: 26,
-            goalDifference: -14,
-            points: 2,
-            form: ["L", "L", "L", "L", "L"],
-            logo: ""
+    let retries = 0;
+    const maxRetries = RETRY_STRATEGY.maxRetries;
+    const initialDelay = RETRY_STRATEGY.initialDelayMs;
+    
+    while (retries <= maxRetries) {
+        try {
+            // Fetch data from the actual API endpoint
+            const response = await axios.get(`${LEAGUE_API_ENDPOINT}/ladder`);
+            
+            if (response.status === 200 && response.data) {
+                return response.data as LeagueLadder;
+            }
+            
+            throw new Error(`Received invalid response: ${response.status}`);
+        } catch (error) {
+            retries++;
+            if (retries > maxRetries) {
+                console.error('Max retries reached when fetching ladder data');
+                throw error;
+            }
+            
+            // Exponential backoff
+            const delay = initialDelay * Math.pow(2, retries - 1);
+            console.log(`Retry ${retries}/${maxRetries} after ${delay}ms`);
+            await new Promise(resolve => setTimeout(resolve, delay));
         }
-    ];
-
-    // Sort teams by points and goal difference
-    initialTeams.sort((a, b) => b.points - a.points || b.goalDifference - a.goalDifference);
-
-    // Add positions to create final TeamStats array
-    const teams: TeamStats[] = initialTeams.map((team, index) => ({
-        ...team,
-        position: index + 1
-    }));
-
-    return {
-        lastUpdated: new Date().toISOString(),
-        teams,
-        leagueName: "A-League Men",
-        season: "2023/24"
-    };
+    }
+    
+    throw new Error('Failed to fetch ladder data after retries');
 }
 
 export async function GET({ request }: RequestEvent) {
