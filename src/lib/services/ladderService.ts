@@ -1040,7 +1040,7 @@ async function scrapeFoxSports(options?: {
 
         // Fox Sports uses a different table structure
         $('.ladder-table tbody tr, .standings-table tbody tr').each((index, element) => {
-            const position = parseInt($(element).find('td').eq(0).text().trim(), 10) || (index + 1));
+            const position = parseInt($(element).find('td').eq(0).text().trim(), 10) || (index + 1);
             const teamName = $(element).find('td').eq(1).text().trim();
             const played = parseInt($(element).find('td').eq(2).text().trim(), 10) || 0;
             const won = parseInt($(element).find('td').eq(3).text().trim(), 10) || 0;
@@ -1061,18 +1061,18 @@ async function scrapeFoxSports(options?: {
             teams.push({
                 id: teamName.toLowerCase().replace(/\s+/g, '-'),
                 name: teamName,
-                position,
-                played,
-                won,
-                drawn,
-                lost,
-                goalsFor,
-                goalsAgainst,
-                goalDifference,
-                points,
-                form,
+                position: position,
+                played: played,
+                won: won,
+                drawn: drawn,
+                lost: lost,
+                goalsFor: goalsFor,
+                goalsAgainst: goalsAgainst,
+                goalDifference: goalDifference,
+                points: points,
+                form: form,
                 logo: `/images/teams/${teamName.toLowerCase().replace(/\s+/g, '-')}.png`,
-                isPerthGlory
+                isPerthGlory: isPerthGlory
             });
         });
 
@@ -1186,14 +1186,27 @@ function extractFormFromHtml(html: string): string[] {
         // Common patterns in various websites:
 
         // 1. Sites often use span or div with classes like 'win', 'loss', 'draw'
-        $('span[class*="win"], div[class*="win"], span[class*="victory"], .w').each(() => form.push('W'));
-        $('span[class*="loss"], div[class*="loss"], span[class*="defeat"], .l').each(() => form.push('L'));
-        $('span[class*="draw"], div[class*="draw"], span[class*="tie"], .d').each(() => form.push('D'));
+        $('span[class*="win"], div[class*="win"], span[class*="victory"], .w').each(function() {
+            form.push('W');
+            return true;
+        });
+
+        $('span[class*="loss"], div[class*="loss"], span[class*="defeat"], .l').each(function() {
+            form.push('L');
+            return true;
+        });
+
+        $('span[class*="draw"], div[class*="draw"], span[class*="tie"], .d').each(function() {
+            form.push('D');
+            return true;
+        });
 
         // 2. Some sites use the letters directly
-        const textForm = $.text().toUpperCase().replace(/[^WDL]/g, '');
-        for (const char of textForm) {
-            form.push(char);
+        if (form.length === 0) {
+            const textForm = $.text().toUpperCase().replace(/[^WDL]/g, '');
+            for (const char of textForm) {
+                form.push(char);
+            }
         }
 
         // Return the first 5 results, or pad with random results if needed
