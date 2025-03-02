@@ -5,15 +5,21 @@ import type { LeagueLadder, TeamStats } from '$lib/types';
 const CACHE_KEY = 'perth-glory-ladder-data';
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 const REDIS_CACHE_KEY = 'ladder_data';
+const REDIS_CACHE_EXPIRY = 1800; // 30 minutes in seconds
 
 // Initialize Redis client
 let redis: Redis | null = null;
 try {
-    if (import.meta.env.VITE_UPSTASH_REDIS_REST_URL && import.meta.env.VITE_UPSTASH_REDIS_REST_TOKEN) {
+    if (typeof import.meta.env !== 'undefined' &&
+        import.meta.env.VITE_UPSTASH_REDIS_REST_URL &&
+        import.meta.env.VITE_UPSTASH_REDIS_REST_TOKEN) {
         redis = new Redis({
             url: import.meta.env.VITE_UPSTASH_REDIS_REST_URL,
             token: import.meta.env.VITE_UPSTASH_REDIS_REST_TOKEN,
         });
+        console.log('Redis client initialized successfully');
+    } else {
+        console.warn('Redis environment variables not found, using local cache only');
     }
 } catch (error) {
     console.error('Failed to initialize Redis client:', error);
@@ -41,70 +47,134 @@ export async function fetchALeagueLadder(options?: {
                 }
             } catch (error) {
                 console.error('Error accessing Redis cache:', error);
+                // Continue with other data sources on Redis error
             }
         }
 
         // Check browser cache if not forcing refresh
         if (!options?.forceRefresh && typeof window !== 'undefined') {
-            const cachedData = localStorage.getItem(CACHE_KEY);
-            if (cachedData) {
-                const { data, timestamp } = JSON.parse(cachedData);
-                // Use cached data if it's still fresh
-                if (Date.now() - timestamp < CACHE_DURATION) {
-                    console.log('Using browser cached ladder data');
-                    return data;
+            try {
+                const cachedData = localStorage.getItem(CACHE_KEY);
+                if (cachedData) {
+                    const parsed = JSON.parse(cachedData);
+                    // Use cached data if it's still fresh
+                    if (Date.now() - parsed.timestamp < CACHE_DURATION) {
+                        console.log('Using browser cached ladder data');
+                        return parsed.data;
+                    }
                 }
+            } catch (error) {
+                console.error('Error reading from local storage:', error);
+                // Continue with data fetching on localStorage error
             }
         }
 
+        // Attempt to fetch from primary and fallback sources in sequence
+        const ladderData = await fetchFromPrimarySources(options) ||
+                          await fetchFromAlternateSource(options);
+
+        // Store successful response in caches
+        if (ladderData) {
+            // Store in Redis cache if available
+            if (redis) {
+                try {
+                    await redis.set(REDIS_CACHE_KEY, ladderData, { ex: REDIS_CACHE_EXPIRY });
+                    console.log('Ladder data stored in Redis cache');
+                } catch (error) {
+                    console.error('Error storing data in Redis:', error);
+                }
+            }
+
+            // Store in browser cache
+            if (typeof window !== 'undefined') {
+                try {
+                    localStorage.setItem(CACHE_KEY, JSON.stringify({
+                        data: ladderData,
+                        timestamp: Date.now()
+                    }));
+                    console.log('Ladder data stored in browser cache');
+                } catch (error) {
+                    console.error('Error storing data in localStorage:', error);
+                }
+            }
+
+            return ladderData;
+        }
+
+        // If all data sources fail, return fallback data
+        console.warn('All data sources failed, using fallback data');
+        return {
+            teams: generateFallbackLadderData(),
+            lastUpdated: new Date().toISOString(),
+            leagueName: 'A-League Men',
+            season: getCurrentSeason(),
+            source: {
+                name: 'Fallback Data',
+                url: '',
+                author: 'System'
+            }
+        };
+    } catch (error) {
+        console.error('Unexpected error in fetchALeagueLadder:', error);
+        return {
+            teams: generateFallbackLadderData(),
+            lastUpdated: new Date().toISOString(),
+            leagueName: 'A-League Men',
+            season: getCurrentSeason(),
+            source: {
+                name: 'Error Fallback',
+                url: '',
+                author: 'System'
+            }
+        };
+    }
+}
+
+/**
+ * Attempts to fetch ladder data from primary sources
+ */
+async function fetchFromPrimarySources(options?: {
+    cache?: RequestCache,
+    signal?: AbortSignal
+}): Promise<LeagueLadder | null> {
+    try {
         // Try Google News API first
         const googleNewsUrl = 'https://news-api.google.com/v2/sports/soccer/australia/a-league/standings';
 
         try {
+            const controller = new AbortController();
+            // Set a timeout for the fetch
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+
             const googleResponse = await fetch(googleNewsUrl, {
                 method: 'GET',
                 cache: options?.cache || 'no-cache',
-                signal: options?.signal,
+                signal: options?.signal || controller.signal,
                 headers: {
                     'Accept': 'application/json',
                     'User-Agent': 'Perth Glory News/1.0'
                 }
             });
 
+            clearTimeout(timeoutId);
+
             if (googleResponse.ok) {
                 const googleData = await googleResponse.json();
                 const teams = parseGoogleDataToLadder(googleData);
 
-                const ladderData: LeagueLadder = {
-                    teams: teams,
-                    lastUpdated: new Date().toISOString(),
-                    leagueName: 'A-League Men',
-                    season: getCurrentSeason(),
-                    source: {
-                        name: 'Google News',
-                        url: 'https://news.google.com/sports/scores',
-                        author: 'Google'
-                    }
-                };
-
-                // Store in Redis cache if available
-                if (redis) {
-                    try {
-                        await redis.set(REDIS_CACHE_KEY, ladderData, { ex: CACHE_DURATION / 1000 });
-                    } catch (error) {
-                        console.error('Error storing data in Redis:', error);
-                    }
+                if (teams.length > 0) {
+                    return {
+                        teams: teams,
+                        lastUpdated: new Date().toISOString(),
+                        leagueName: 'A-League Men',
+                        season: getCurrentSeason(),
+                        source: {
+                            name: 'Google News',
+                            url: 'https://news.google.com/sports/scores',
+                            author: 'Google'
+                        }
+                    };
                 }
-
-                // Store in browser cache
-                if (typeof window !== 'undefined') {
-                    localStorage.setItem(CACHE_KEY, JSON.stringify({
-                        data: ladderData,
-                        timestamp: Date.now()
-                    }));
-                }
-
-                return ladderData;
             }
         } catch (error) {
             console.error('Error fetching from Google News API:', error);
@@ -113,57 +183,49 @@ export async function fetchALeagueLadder(options?: {
         // If Google News fails, try ESPN
         const espnUrl = 'https://site.api.espn.com/apis/v2/sports/soccer/aus.1/standings';
 
-        const espnResponse = await fetch(espnUrl, {
-            method: 'GET',
-            cache: options?.cache || 'no-cache',
-            signal: options?.signal,
-            headers: {
-                'Accept': 'application/json',
-                'User-Agent': 'Perth Glory News/1.0'
-            }
-        });
+        try {
+            const controller = new AbortController();
+            // Set a timeout for the fetch
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-        if (espnResponse.ok) {
-            const espnData = await espnResponse.json();
-            const teams = parseEspnDataToLadder(espnData);
-
-            const ladderData: LeagueLadder = {
-                teams: teams,
-                lastUpdated: new Date().toISOString(),
-                leagueName: 'A-League Men',
-                season: getCurrentSeason(),
-                source: {
-                    name: 'ESPN',
-                    url: 'https://www.espn.com.au/football/standings/_/league/aus.1',
-                    author: 'ESPN'
+            const espnResponse = await fetch(espnUrl, {
+                method: 'GET',
+                cache: options?.cache || 'no-cache',
+                signal: options?.signal || controller.signal,
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'Perth Glory News/1.0'
                 }
-            };
+            });
 
-            // Store in Redis cache if available
-            if (redis) {
-                try {
-                    await redis.set(REDIS_CACHE_KEY, ladderData, { ex: CACHE_DURATION / 1000 });
-                } catch (error) {
-                    console.error('Error storing data in Redis:', error);
+            clearTimeout(timeoutId);
+
+            if (espnResponse.ok) {
+                const espnData = await espnResponse.json();
+                const teams = parseEspnDataToLadder(espnData);
+
+                if (teams.length > 0) {
+                    return {
+                        teams: teams,
+                        lastUpdated: new Date().toISOString(),
+                        leagueName: 'A-League Men',
+                        season: getCurrentSeason(),
+                        source: {
+                            name: 'ESPN',
+                            url: 'https://www.espn.com.au/football/standings/_/league/aus.1',
+                            author: 'ESPN'
+                        }
+                    };
                 }
             }
-
-            // Store in browser cache
-            if (typeof window !== 'undefined') {
-                localStorage.setItem(CACHE_KEY, JSON.stringify({
-                    data: ladderData,
-                    timestamp: Date.now()
-                }));
-            }
-
-            return ladderData;
+        } catch (error) {
+            console.error('Error fetching from ESPN API:', error);
         }
 
-        // If all direct sources fail, try alternate sources
-        return fetchFromAlternateSource(options);
+        return null;
     } catch (error) {
-        console.error('Error fetching ladder data:', error);
-        return fetchFromAlternateSource(options);
+        console.error('Error in fetchFromPrimarySources:', error);
+        return null;
     }
 }
 
