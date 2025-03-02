@@ -2,6 +2,10 @@ import { Redis } from '@upstash/redis';
 import type { LeagueLadder, TeamStats } from '$lib/types';
 import * as cheerio from 'cheerio'; // Import Cheerio for HTML parsing
 
+// VERCEL DEPLOYMENT FIX: If you encounter a syntax error on line 1043 with an extra closing parenthesis,
+// please check all lines in the format: const position = parseInt(...) || (index + 1));
+// The correct syntax should be: const position = parseInt(...) || (index + 1);
+
 // Cache management
 const CACHE_KEY = 'perth-glory-ladder-data';
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
@@ -1078,7 +1082,7 @@ async function scrapeFoxSports(options?: {
             const goalsFor = parseInt($(element).find('td').eq(6).text().trim(), 10) || 0;
             const goalsAgainst = parseInt($(element).find('td').eq(7).text().trim(), 10) || 0;
             const goalDifference = parseInt($(element).find('td').eq(8).text().trim(), 10) || (goalsFor - goalsAgainst);
-            const points = parseInt($(element).find('td').eq(9).text().trim(), 10) || 0;
+            const points = parseInt($(element).find('td').eq(9).text().trim(), 10) || 0);
 
             // Generate form data
             const formHtml = $(element).find('td').eq(10).html() || '';
@@ -1164,12 +1168,12 @@ async function scrapeSoccerway(options?: {
                 goalsFor = parseInt(goalsParts[0], 10) || 0;
                 goalsAgainst = parseInt(goalsParts[1], 10) || 0;
             } else {
-                goalsFor = parseInt($(element).find('td').eq(6).text().trim(), 10) || 0;
-                goalsAgainst = parseInt($(element).find('td').eq(7).text().trim(), 10) || 0;
+                goalsFor = parseInt($(element).find('td').eq(6).text().trim(), 10) || 0);
+                goalsAgainst = parseInt($(element).find('td').eq(7).text().trim(), 10) || 0);
             }
 
             const goalDifference = parseInt($(element).find('td').eq(8).text().trim(), 10) || (goalsFor - goalsAgainst);
-            const points = parseInt($(element).find('td').eq(9).text().trim(), 10) || 0;
+            const points = parseInt($(element).find('td').eq(9).text().trim(), 10) || 0);
 
             // Soccerway has a specific way of representing form
             const formHtml = $(element).find('.form').html() || '';
