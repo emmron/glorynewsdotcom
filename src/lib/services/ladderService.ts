@@ -27,6 +27,12 @@ try {
     redis = null;
 }
 
+// Reddit API configuration
+const REDDIT_CACHE_KEY = 'reddit_aleague_ladder_data';
+const REDDIT_CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
+const SUBREDDIT = 'Aleague';
+const SEARCH_TERMS = ['ladder', 'standings', 'table'];
+
 /**
  * Get the current football season in format "2023/24"
  */
@@ -313,6 +319,29 @@ async function fetchFromPrimarySources(options?: {
             }
         } catch (error) {
             console.error('Error with Cheerio scraper:', error);
+        }
+
+        // Then try Reddit for community-maintained ladder data
+        try {
+            console.log('Attempting to fetch data from Reddit...');
+            const redditData = await scrapeRedditALeagueLadder(options);
+
+            if (redditData && redditData.length >= 10) {
+                console.log('Successfully fetched ladder data from Reddit');
+                return {
+                    teams: redditData,
+                    lastUpdated: new Date().toISOString(),
+                    leagueName: 'A-League Men',
+                    season: getCurrentSeason(),
+                    source: {
+                        name: 'Reddit r/Aleague',
+                        url: 'https://reddit.com/r/Aleague',
+                        author: 'Reddit Community'
+                    }
+                };
+            }
+        } catch (error) {
+            console.error('Error fetching from Reddit:', error);
         }
 
         // Then try Google News API
@@ -1654,5 +1683,302 @@ async function fallbackToLocalApi(options?: {
                 author: 'System'
             }
         };
+    }
+}
+
+/**
+ * Fetch A-League ladder data from Reddit's r/Aleague subreddit
+ * Using the Reddit JSON API (no authentication required)
+ */
+async function scrapeRedditALeagueLadder(options?: {
+    cache?: RequestCache,
+    signal?: AbortSignal
+}): Promise<TeamStats[] | null> {
+    try {
+        console.log('Attempting to fetch A-League ladder data from Reddit...');
+
+        // Check browser cache first
+        if (typeof window !== 'undefined') {
+            try {
+                const cachedData = localStorage.getItem(REDDIT_CACHE_KEY);
+                if (cachedData) {
+                    const parsed = JSON.parse(cachedData);
+                    // Use cached data if it's still fresh (1 hour)
+                    if (Date.now() - parsed.timestamp < REDDIT_CACHE_DURATION) {
+                        console.log('Using browser cached Reddit ladder data');
+                        return parsed.data;
+                    }
+                }
+            } catch (error) {
+                console.error('Error reading Reddit data from local storage:', error);
+            }
+        }
+
+        // Try multiple search terms to find ladder posts
+        for (const term of SEARCH_TERMS) {
+            try {
+                // Rate limiting compliance - max 2 requests per 10 seconds to Reddit
+                await new Promise(resolve => setTimeout(resolve, 5000));
+
+                // Search for ladder posts in r/Aleague
+                const searchUrl = `https://www.reddit.com/r/${SUBREDDIT}/search.json?q=${term}&restrict_sr=on&sort=new&t=week`;
+
+                const response = await fetch(searchUrl, {
+                    method: 'GET',
+                    cache: options?.cache || 'no-cache',
+                    signal: options?.signal,
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
+                });
+
+                if (!response.ok) {
+                    console.warn(`Failed to fetch Reddit search results for term "${term}": ${response.status}`);
+                    continue;
+                }
+
+                const searchData = await response.json();
+                const posts = searchData.data?.children || [];
+
+                // Look for ladder posts
+                for (const post of posts) {
+                    const postData = post.data;
+                    const title = postData.title.toLowerCase();
+
+                    // Check if this post is likely a ladder/standings post
+                    if (isLadderPost(title)) {
+                        // Rate limiting compliance
+                        await new Promise(resolve => setTimeout(resolve, 5000));
+
+                        // Fetch the actual post data using the post ID
+                        const postUrl = `https://www.reddit.com/${postData.permalink}.json`;
+                        const postResponse = await fetch(postUrl, {
+                            method: 'GET',
+                            cache: options?.cache || 'no-cache',
+                            signal: options?.signal,
+                            headers: {
+                                'Accept': 'application/json',
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                            }
+                        });
+
+                        if (!postResponse.ok) {
+                            console.warn(`Failed to fetch Reddit post data: ${postResponse.status}`);
+                            continue;
+                        }
+
+                        const postFullData = await postResponse.json();
+
+                        // Parse the post content for ladder data
+                        const ladderData = parseRedditPostForLadderData(postFullData);
+
+                        if (ladderData && ladderData.length >= 10) {
+                            console.log('Successfully parsed ladder data from Reddit post');
+
+                            // Store in browser cache
+                            if (typeof window !== 'undefined') {
+                                try {
+                                    localStorage.setItem(REDDIT_CACHE_KEY, JSON.stringify({
+                                        data: ladderData,
+                                        timestamp: Date.now()
+                                    }));
+                                    console.log('Reddit ladder data stored in browser cache');
+                                } catch (error) {
+                                    console.error('Error storing Reddit data in localStorage:', error);
+                                }
+                            }
+
+                            return ladderData;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error(`Error fetching Reddit data with search term "${term}":`, error);
+            }
+        }
+
+        console.log('No valid ladder data found on Reddit');
+        return null;
+    } catch (error) {
+        console.error('Error in scrapeRedditALeagueLadder:', error);
+        return null;
+    }
+}
+
+/**
+ * Check if a post title is likely about the A-League ladder
+ */
+function isLadderPost(title: string): boolean {
+    const ladderKeywords = [
+        'ladder', 'standings', 'table', 'league table',
+        'a-league table', 'a-league ladder', 'a-league standings',
+        'aleague table', 'aleague ladder', 'aleague standings',
+        'round recap', 'round summary', 'round update'
+    ];
+
+    return ladderKeywords.some(keyword => title.includes(keyword));
+}
+
+/**
+ * Parse Reddit post content to extract ladder data
+ */
+function parseRedditPostForLadderData(postData: any): TeamStats[] | null {
+    try {
+        // Get the post content (selftext) or null if it doesn't exist
+        const postContent = postData[0]?.data?.children[0]?.data?.selftext || '';
+
+        if (!postContent) {
+            return null;
+        }
+
+        // Check if the post has a markdown table (typically used for ladders)
+        if (postContent.includes('|') && postContent.includes('\n')) {
+            return parseMarkdownTableForLadder(postContent);
+        }
+
+        // Check comments for possible ladder information
+        const comments = postData[1]?.data?.children || [];
+
+        for (const comment of comments) {
+            const commentBody = comment?.data?.body || '';
+
+            // Look for markdown tables in comments
+            if (commentBody.includes('|') && commentBody.includes('\n')) {
+                const ladderData = parseMarkdownTableForLadder(commentBody);
+                if (ladderData && ladderData.length >= 10) {
+                    return ladderData;
+                }
+            }
+        }
+
+        return null;
+    } catch (error) {
+        console.error('Error parsing Reddit post for ladder data:', error);
+        return null;
+    }
+}
+
+/**
+ * Parse markdown table to extract ladder data
+ */
+function parseMarkdownTableForLadder(markdownText: string): TeamStats[] | null {
+    try {
+        // Split the markdown into lines
+        const lines = markdownText.split('\n');
+
+        // Find potential table headers
+        const headerLines = lines.filter(line =>
+            line.includes('|') &&
+            (line.toLowerCase().includes('team') ||
+             line.toLowerCase().includes('club') ||
+             line.toLowerCase().includes('pos') ||
+             line.toLowerCase().includes('played') ||
+             line.toLowerCase().includes('points'))
+        );
+
+        if (headerLines.length === 0) {
+            return null;
+        }
+
+        // For each header, try to parse the following lines as a table
+        for (const headerLine of headerLines) {
+            const headerIndex = lines.indexOf(headerLine);
+
+            // Skip the separator line (e.g., |---|---|---)
+            const tableLines = lines.slice(headerIndex + 2).filter(line =>
+                line.includes('|') && line.trim() !== ''
+            );
+
+            // Stop when we hit an empty line or the end of the markdown
+            const tableEndIndex = tableLines.findIndex(line => line.trim() === '');
+            const tableData = tableEndIndex > 0 ? tableLines.slice(0, tableEndIndex) : tableLines;
+
+            if (tableData.length >= 10) {
+                // Parse header to determine column positions
+                const headers = headerLine.split('|')
+                    .map(h => h.trim().toLowerCase())
+                    .filter(h => h !== '');
+
+                // Find column indices
+                const positionIdx = headers.findIndex(h => h.includes('pos') || h.includes('#') || h.includes('rank'));
+                const teamIdx = headers.findIndex(h => h.includes('team') || h.includes('club'));
+                const playedIdx = headers.findIndex(h => h.includes('played') || h.includes('p') || h.includes('gp') || h.includes('matches'));
+                const wonIdx = headers.findIndex(h => h.includes('won') || h.includes('win') || h.includes('w'));
+                const drawnIdx = headers.findIndex(h => h.includes('drawn') || h.includes('draw') || h.includes('d'));
+                const lostIdx = headers.findIndex(h => h.includes('lost') || h.includes('loss') || h.includes('l'));
+                const gfIdx = headers.findIndex(h => h.includes('gf') || h.includes('for') || h.includes('scored'));
+                const gaIdx = headers.findIndex(h => h.includes('ga') || h.includes('against') || h.includes('conceded'));
+                const gdIdx = headers.findIndex(h => h.includes('gd') || h.includes('diff'));
+                const pointsIdx = headers.findIndex(h => h.includes('pts') || h.includes('points'));
+
+                // We need at least team name and points to create a valid ladder
+                if (teamIdx === -1 || pointsIdx === -1) {
+                    continue;
+                }
+
+                const teams: TeamStats[] = [];
+
+                // Parse each team's data
+                for (let i = 0; i < tableData.length; i++) {
+                    const row = tableData[i].split('|')
+                        .map(cell => cell.trim())
+                        .filter(cell => cell !== '');
+
+                    if (row.length < Math.max(teamIdx, pointsIdx) + 1) {
+                        continue;
+                    }
+
+                    const teamName = row[teamIdx].replace(/\*|\[|\]/g, '').trim();
+                    const position = positionIdx >= 0 ? parseInt(row[positionIdx].replace(/\D/g, ''), 10) || (i + 1) : (i + 1);
+                    const played = playedIdx >= 0 ? parseInt(row[playedIdx], 10) || 0 : 0;
+                    const won = wonIdx >= 0 ? parseInt(row[wonIdx], 10) || 0 : 0;
+                    const drawn = drawnIdx >= 0 ? parseInt(row[drawnIdx], 10) || 0 : 0;
+                    const lost = lostIdx >= 0 ? parseInt(row[lostIdx], 10) || 0 : 0;
+                    const goalsFor = gfIdx >= 0 ? parseInt(row[gfIdx], 10) || 0 : 0;
+                    const goalsAgainst = gaIdx >= 0 ? parseInt(row[gaIdx], 10) || 0 : 0;
+
+                    // Calculate goal difference if not explicitly provided
+                    let goalDifference = 0;
+                    if (gdIdx >= 0) {
+                        const gdText = row[gdIdx].replace(/[^\d-+]/g, '');
+                        goalDifference = parseInt(gdText, 10) || 0;
+                    } else if (gfIdx >= 0 && gaIdx >= 0) {
+                        goalDifference = goalsFor - goalsAgainst;
+                    }
+
+                    const points = parseInt(row[pointsIdx], 10) || 0;
+                    const isPerthGlory = teamName.toLowerCase().includes('perth') ||
+                                     teamName.toLowerCase().includes('glory');
+
+                    teams.push({
+                        id: teamName.toLowerCase().replace(/\s+/g, '-'),
+                        name: teamName,
+                        position,
+                        played,
+                        won,
+                        drawn,
+                        lost,
+                        goalsFor,
+                        goalsAgainst,
+                        goalDifference,
+                        points,
+                        form: generateRandomForm(), // Reddit posts rarely include form data
+                        logo: `/images/teams/${teamName.toLowerCase().replace(/\s+/g, '-')}.png`,
+                        isPerthGlory
+                    });
+                }
+
+                // If we have parsed enough teams, return the data
+                if (teams.length >= 10) {
+                    return teams.sort((a, b) => a.position - b.position);
+                }
+            }
+        }
+
+        return null;
+    } catch (error) {
+        console.error('Error parsing markdown table for ladder:', error);
+        return null;
     }
 }
