@@ -398,9 +398,9 @@ export default function Ladder({ teams, lastUpdated, isLoading = false }: Ladder
                         </div>
                       )}
                       <Link href={`/team/${team.id}`}>
-                        <a className={`text-sm font-medium hover:text-purple-700 dark:hover:text-purple-400 ${isHighlighted ? 'text-purple-800 dark:text-purple-400 font-semibold' : 'text-gray-900 dark:text-white'}`}>
+                        <span className={`text-sm font-medium hover:text-purple-700 dark:hover:text-purple-400 cursor-pointer ${isHighlighted ? 'text-purple-800 dark:text-purple-400 font-semibold' : 'text-gray-900 dark:text-white'}`}>
                           {team.name}
-                        </a>
+                        </span>
                       </Link>
                     </div>
                   </td>
@@ -460,9 +460,9 @@ export default function Ladder({ teams, lastUpdated, isLoading = false }: Ladder
           <div className="flex items-center ml-auto">
             <HelpCircle className="w-4 h-4 mr-1" />
             <Link href="/ladder/rules">
-              <a className="hover:text-gray-700 dark:hover:text-gray-300">
+              <span className="hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer">
                 Competition Rules
-              </a>
+              </span>
             </Link>
           </div>
         </div>
