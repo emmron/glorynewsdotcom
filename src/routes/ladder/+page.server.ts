@@ -1,22 +1,38 @@
 import { error } from '@sveltejs/kit';
 import type { LeagueLadder } from '$lib/types';
 import { CACHE_DURATIONS } from '$lib/config';
-import { fetchALeagueLadder } from '$lib/services/ladderService';
+import { fetchALeagueLadder, refreshLadder } from '$lib/services/ladderService';
 
 export async function load({ fetch, setHeaders }) {
   try {
     // Implement proper ladder fetching using our service
-    const ladder = await fetchALeagueLadder({
+    let ladder = await fetchALeagueLadder({
       cache: 'no-store',
       forceRefresh: false
     });
 
-    // Set cache headers for the page
-    if (ladder) {
-      setHeaders({
-        'Cache-Control': `max-age=${CACHE_DURATIONS.ladder}, s-maxage=${CACHE_DURATIONS.ladder}`
-      });
+    // Sanity check: If ladder is null or doesn't have teams, try refreshing
+    if (!ladder || !ladder.teams || ladder.teams.length === 0) {
+      console.warn('Initial ladder data invalid, attempting refresh');
+      ladder = await refreshLadder();
     }
+
+    // Additional sanity check: Verify ladder has expected properties
+    if (!ladder || !ladder.teams || !ladder.season || !ladder.lastUpdated) {
+      console.error('Ladder data failed validation checks');
+      throw new Error('Invalid ladder data structure');
+    }
+
+    // Verify we have at least 10 teams (A-League has 12 teams)
+    if (ladder.teams.length < 10) {
+      console.error('Ladder data has insufficient teams:', ladder.teams.length);
+      throw new Error('Incomplete ladder data');
+    }
+
+    // Set cache headers for the page
+    setHeaders({
+      'Cache-Control': `max-age=${CACHE_DURATIONS.ladder}, s-maxage=${CACHE_DURATIONS.ladder}`
+    });
 
     return {
       ladder,
