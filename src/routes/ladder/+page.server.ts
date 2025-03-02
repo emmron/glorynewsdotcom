@@ -1,31 +1,37 @@
 import { error } from '@sveltejs/kit';
 import type { LeagueLadder } from '$lib/types';
 import { CACHE_DURATIONS } from '$lib/config';
+import { fetchALeagueLadder } from '$lib/services/ladderService';
 
-// Just use the API endpoint directly
-export async function load() {
+export async function load({ fetch, setHeaders }) {
   try {
-    // Laziest possible implementation - just call our own API
-    const response = await fetch('/api/ladder');
+    // Implement proper ladder fetching using our service
+    const ladder = await fetchALeagueLadder({
+      cache: 'no-store',
+      forceRefresh: false
+    });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch ladder: ${response.status}`);
+    // Set cache headers for the page
+    if (ladder) {
+      setHeaders({
+        'Cache-Control': `max-age=${CACHE_DURATIONS.ladder}, s-maxage=${CACHE_DURATIONS.ladder}`
+      });
     }
-
-    const ladder = await response.json();
 
     return {
       ladder,
       error: null
     };
   } catch (err) {
-    console.error('¯\\_(ツ)_/¯ whatever:', err);
+    console.error('Error fetching ladder data:', err);
 
+    // Return a more helpful error
     return {
       ladder: null,
       error: {
-        message: 'Ladder broke lol',
-        status: 500
+        message: 'Unable to load ladder data. Please try again later.',
+        status: 500,
+        details: err instanceof Error ? err.message : 'Unknown error'
       }
     };
   }
