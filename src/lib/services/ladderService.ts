@@ -1082,7 +1082,7 @@ async function scrapeFoxSports(options?: {
             const goalsFor = parseInt($(element).find('td').eq(6).text().trim(), 10) || 0;
             const goalsAgainst = parseInt($(element).find('td').eq(7).text().trim(), 10) || 0;
             const goalDifference = parseInt($(element).find('td').eq(8).text().trim(), 10) || (goalsFor - goalsAgainst);
-            const points = parseInt($(element).find('td').eq(9).text().trim(), 10) || 0);
+            const points = parseInt($(element).find('td').eq(9).text().trim(), 10) || 0;
 
             // Generate form data
             const formHtml = $(element).find('td').eq(10).html() || '';
@@ -1168,12 +1168,12 @@ async function scrapeSoccerway(options?: {
                 goalsFor = parseInt(goalsParts[0], 10) || 0;
                 goalsAgainst = parseInt(goalsParts[1], 10) || 0;
             } else {
-                goalsFor = parseInt($(element).find('td').eq(6).text().trim(), 10) || 0);
-                goalsAgainst = parseInt($(element).find('td').eq(7).text().trim(), 10) || 0);
+                goalsFor = parseInt($(element).find('td').eq(6).text().trim(), 10) || 0;
+                goalsAgainst = parseInt($(element).find('td').eq(7).text().trim(), 10) || 0;
             }
 
             const goalDifference = parseInt($(element).find('td').eq(8).text().trim(), 10) || (goalsFor - goalsAgainst);
-            const points = parseInt($(element).find('td').eq(9).text().trim(), 10) || 0);
+            const points = parseInt($(element).find('td').eq(9).text().trim(), 10) || 0;
 
             // Soccerway has a specific way of representing form
             const formHtml = $(element).find('.form').html() || '';
