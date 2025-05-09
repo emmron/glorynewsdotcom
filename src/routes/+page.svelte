@@ -4,9 +4,10 @@
   import type { Article } from '../types/article';
   import { fade, fly } from 'svelte/transition';
   import { invalidateAll } from '$app/navigation';
+  import SEO from '$lib/components/SEO.svelte';
 
-  // Get data from server-side load function
-  export let data;
+  // Define the expected shape of the data prop
+  export let data: { articles: Article[] };
 
   let articles: Article[] = [];
   let loading = false;
@@ -81,6 +82,11 @@
       } else if (date instanceof Date) {
         return format(date, 'MMM d, yyyy');
       } else {
+        // Explicitly handle undefined or null, though type should prevent this
+        if (date === null || date === undefined) {
+          console.warn('formatDate received null or undefined date');
+          return 'Date unavailable';
+        }
         return 'Date unavailable';
       }
     } catch (error) {
@@ -99,14 +105,12 @@
   }
 </script>
 
-<svelte:head>
-  <title>Perth Glory News - Latest Updates</title>
-  <meta name="description" content="Latest news and updates about Perth Glory Football Club" />
-  <meta property="og:title" content="Perth Glory News - Latest Updates" />
-  <meta property="og:description" content="Stay up to date with the latest Perth Glory football news and updates" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="preconnect" href="https://perthglory.com.au" />
-</svelte:head>
+<SEO
+  title="Perth Glory News - Latest Updates and News"
+  description="Stay up to date with the latest Perth Glory football news, match reports, player updates, and club announcements."
+  keywords="Perth Glory, A-League, Football, Soccer, Perth Glory FC, Perth Glory News, Football News, A-League News"
+  image={articles[0]?.featuredImage || ''}
+/>
 
 <div class="min-h-screen bg-gradient-to-b from-purple-100 to-white">
   <main class="container mx-auto px-4 py-8">
@@ -199,8 +203,8 @@
 
             <div class="p-6 flex-grow flex flex-col">
               <div class="flex items-center text-sm text-gray-500 mb-2">
-                <time datetime={article.date}>
-                  {formatDate(article.date)}
+                <time datetime={typeof article.publishDate === 'string' ? article.publishDate : article.publishDate?.toISOString()}>
+                  {formatDate(article.publishDate)}
                 </time>
                 {#if article.sourceName}
                   <span class="mx-2">·</span>

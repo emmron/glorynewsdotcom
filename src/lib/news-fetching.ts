@@ -1,5 +1,5 @@
 import { parse } from 'node-html-parser';
-import type { Article, NewsArticle, NewsSource } from '$lib/types';
+import type { NewsArticle, NewsSource } from '$lib/types';
 import { sanitizeContent, extractReadTime, fetchWithTimeout } from './utils';
 import { Redis } from '@upstash/redis';
 import { z } from 'zod';
@@ -99,6 +99,169 @@ const CACHE_CONFIG = {
     staleWhileRevalidate: 3600, // 1 hour
   },
 } as const;
+
+// Source implementations
+class PerthGlorySource implements NewsSource {
+  async fetch(): Promise<Article[]> {
+    try {
+      const response = await fetchWithTimeout('https://www.perthglory.com.au/news', { timeout: 5000 });
+      const html = await response.text();
+      const root = parse(html);
+      const articles = root.querySelectorAll('.news-list article').map(article => this.parseArticle(article));
+      return articles;
+    } catch (error) {
+      console.error('Error fetching from Perth Glory source:', error);
+      return [];
+    }
+  }
+
+  private parseArticle(element: any): Article {
+    const title = element.querySelector('.article-title').text.trim();
+    const content = sanitizeContent(element.querySelector('.article-content').innerHTML);
+    const publishDateStr = element.querySelector('.article-date').text.trim();
+    const imageUrl = element.querySelector('img')?.getAttribute('src') || '';
+    const link = element.querySelector('a')?.getAttribute('href') || '';
+
+    return {
+      id: generateSlug(title),
+      title,
+      content,
+      publishDate: new Date(publishDateStr),
+      sourceUrl: `https://www.perthglory.com.au${link}`,
+      images: {
+        featured: imageUrl,
+      },
+      categories: ['News'],
+      tags: ['Perth Glory', 'Official'],
+      metadata: {
+        wordCount: content.split(/\s+/).length,
+        readingTime: extractReadTime(content),
+        isSponsored: false,
+        source: 'official',
+        priority: 1,
+        engagement: {}
+      }
+    };
+  }
+}
+
+class KeepUpSource implements NewsSource {
+  async fetch(): Promise<Article[]> {
+    try {
+      const response = await fetchWithTimeout('https://keepup.com.au/perth-glory', { timeout: 5000 });
+      const html = await response.text();
+      const root = parse(html);
+      const articles = root.querySelectorAll('.news-grid article').map(article => this.parseArticle(article));
+      return articles;
+    } catch (error) {
+      console.error('Error fetching from KeepUp source:', error);
+      return [];
+    }
+  }
+
+  private parseArticle(element: any): Article {
+    const title = element.querySelector('h2').text.trim();
+    const content = sanitizeContent(element.querySelector('.article-excerpt')?.innerHTML || '');
+    const link = element.querySelector('a')?.getAttribute('href') || '';
+    const imageUrl = element.querySelector('img')?.getAttribute('src') || '';
+
+    return {
+      id: generateSlug(title),
+      title,
+      content,
+      publishDate: new Date(),
+      sourceUrl: `https://keepup.com.au${link}`,
+      images: {
+        featured: imageUrl,
+      },
+      categories: ['News'],
+      tags: ['Perth Glory', 'A-League'],
+      metadata: {
+        wordCount: content.split(/\s+/).length,
+        readingTime: extractReadTime(content),
+        isSponsored: false,
+        source: 'partner',
+        priority: 2,
+        engagement: {}
+      }
+    };
+  }
+}
+
+class FootballAustraliaSource implements NewsSource {
+  async fetch(): Promise<Article[]> {
+    try {
+      const response = await fetchWithTimeout('https://www.footballaustralia.com.au/news', { timeout: 5000 });
+      const html = await response.text();
+      const root = parse(html);
+      const articles = root.querySelectorAll('.news-item')
+        .filter(item => item.textContent.includes('Perth Glory'))
+        .map(article => this.parseArticle(article));
+      return articles;
+    } catch (error) {
+      console.error('Error fetching from Football Australia source:', error);
+      return [];
+    }
+  }
+
+  private parseArticle(element: any): Article {
+    const title = element.querySelector('.news-title').text.trim();
+    const content = sanitizeContent(element.querySelector('.news-excerpt')?.innerHTML || '');
+    const publishDateStr = element.querySelector('.news-date').text.trim();
+    const link = element.querySelector('a')?.getAttribute('href') || '';
+    const imageUrl = element.querySelector('img')?.getAttribute('src') || '';
+
+    return {
+      id: generateSlug(title),
+      title,
+      content,
+      publishDate: new Date(publishDateStr),
+      sourceUrl: `https://www.footballaustralia.com.au${link}`,
+      images: {
+        featured: imageUrl,
+      },
+      categories: ['News'],
+      tags: ['Perth Glory', 'Football Australia'],
+      metadata: {
+        wordCount: content.split(/\s+/).length,
+        readingTime: extractReadTime(content),
+        isSponsored: false,
+        source: 'official',
+        priority: 2,
+        engagement: {}
+      }
+    };
+  }
+}
+
+// Social media source implementations
+class TwitterSource implements NewsSource {
+  async fetch(): Promise<Article[]> {
+    // Implementation would use Twitter API
+    return [];
+  }
+}
+
+class FacebookSource implements NewsSource {
+  async fetch(): Promise<Article[]> {
+    // Implementation would use Facebook API
+    return [];
+  }
+}
+
+class InstagramSource implements NewsSource {
+  async fetch(): Promise<Article[]> {
+    // Implementation would use Instagram API
+    return [];
+  }
+}
+
+class YouTubeSource implements NewsSource {
+  async fetch(): Promise<Article[]> {
+    // Implementation would use YouTube API
+    return [];
+  }
+}
 
 export class NewsFetcher {
   private redis: Redis;

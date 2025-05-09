@@ -1,0 +1,23 @@
+[
+  {
+    "id": "c1",
+    "articleId": "article-1",
+    "authorName": "John Doe",
+    "text": "Great article! I'm excited to see how the team performs this season.",
+    "createdAt": "2023-12-10T10:30:00Z"
+  },
+  {
+    "id": "c2",
+    "articleId": "article-1",
+    "authorName": "Sarah Smith",
+    "text": "The new signings look promising. Hope they can help us secure a top spot this year!",
+    "createdAt": "2023-12-11T08:15:00Z"
+  },
+  {
+    "id": "c3",
+    "articleId": "article-1",
+    "authorName": "Mike Johnson",
+    "text": "I've been a Glory fan for 20 years and this is the most excited I've been about our squad in a long time. Can't wait for the season to start!",
+    "createdAt": "2023-12-11T15:45:00Z"
+  }
+]

@@ -1,12 +1,19 @@
 export interface Article {
   id: string;
   title: string;
+  slug: string;
   content: string;
-  summary: string;
-  date: string;
-  imageUrl: string;
+  publishDate: Date;
+  author: string;
   category: string;
-  source?: string;
+  excerpt: string;
+  readTime?: number;
+  featuredImage?: string;
+  tags: string[];
+  sourceName?: string;
   sourceUrl?: string;
-  author?: string;
+  lastModified?: Date;
+  scrapedAt?: Date;
+  isScraped?: boolean;
+  club: string;
 }

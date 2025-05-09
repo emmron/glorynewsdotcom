@@ -171,42 +171,59 @@
         {#each filteredArticles as article (article.id)}
           <a
             href="/news/{article.id}"
-            class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden flex flex-col h-full transform hover:-translate-y-1 hover:scale-[1.01] transition-transform"
+            class="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-2 border border-gray-100"
             in:fade={{ duration: 300 }}
             animate:flip={{ duration: 300, easing: quintOut }}
           >
             <article class="p-0 flex flex-col h-full">
-              <div class="relative aspect-[16/9] bg-purple-100">
+              <div class="relative aspect-[16/9] bg-purple-100 overflow-hidden">
                 {#if article.imageUrl}
                   <img
                     src={article.imageUrl}
                     alt={article.title}
-                    class="w-full h-full object-cover"
+                    class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
                     on:error={handleImageError}
                   />
                 {:else}
-                  <div class="w-full h-full flex items-center justify-center bg-purple-50">
-                    <span class="text-purple-300 text-4xl">PGN</span>
+                  <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-50 to-purple-100">
+                    <span class="text-purple-300 text-4xl font-bold">PGN</span>
                   </div>
                 {/if}
 
+                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60"></div>
+
                 {#if article.category}
-                  <span class="absolute top-3 right-3 text-xs px-2 py-1 rounded-full bg-purple-700 text-white font-medium">
+                  <span class="absolute top-3 left-3 text-xs px-3 py-1.5 rounded-full bg-purple-700 text-white font-medium shadow-md">
                     {article.category}
                   </span>
                 {/if}
+
+                <time
+                  class="absolute bottom-3 left-3 text-xs px-2 py-1 rounded-md bg-black/60 text-white font-medium"
+                  datetime={article.publishDate || article.date}
+                >
+                  {formatDate(article.publishDate || article.date)}
+                </time>
               </div>
 
-              <div class="p-5 flex flex-col flex-grow">
-                <h2 class="text-xl font-semibold text-gray-900 mb-3 line-clamp-2">{article.title}</h2>
-                <p class="text-gray-600 text-sm mb-4 line-clamp-3 flex-grow">{article.summary}</p>
+              <div class="p-6 flex flex-col flex-grow">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-purple-800 transition-colors">{article.title}</h2>
+                <p class="text-gray-600 text-sm mb-5 line-clamp-3 flex-grow">{article.summary}</p>
 
                 <div class="flex justify-between items-center mt-auto pt-4 border-t border-gray-100">
-                  <time class="text-xs text-gray-500" datetime={article.publishDate || article.date}>
-                    {formatDate(article.publishDate || article.date)}
-                  </time>
+                  <div class="flex items-center">
+                    <svg class="w-4 h-4 text-gray-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                    </svg>
+                    <span class="text-xs text-gray-500">Perth Glory News</span>
+                  </div>
 
-                  <span class="text-purple-600 text-sm font-medium">Read More →</span>
+                  <span class="inline-flex items-center text-purple-700 text-sm font-medium group-hover:translate-x-1 transition-transform">
+                    Read More
+                    <svg class="w-4 h-4 ml-1 group-hover:ml-2 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                  </span>
                 </div>
               </div>
             </article>
@@ -237,5 +254,10 @@
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+
+  /* Add smooth scrolling to the page */
+  :global(html) {
+    scroll-behavior: smooth;
   }
 </style>

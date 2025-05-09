@@ -5,26 +5,38 @@ interface PageLoadParams {
 
 export const load = async ({ params, fetch }: PageLoadParams) => {
   try {
-    const response = await fetch(`/api/news/${params.id}`);
+    // Fetch article and comments in parallel
+    const [articleResponse, commentsResponse] = await Promise.all([
+      fetch(`/api/news/${params.id}`),
+      fetch(`/api/comments/${params.id}`)
+    ]);
 
-    if (!response.ok) {
-      throw new Error(`Failed to load article: ${response.statusText}`);
+    if (!articleResponse.ok) {
+      throw new Error(`Failed to load article: ${articleResponse.statusText}`);
     }
 
-    const data = await response.json();
+    const articleData = await articleResponse.json();
 
-    if (!data.success || !data.article) {
+    if (!articleData.success || !articleData.article) {
       throw new Error('Article not found');
     }
 
+    // Handle comments
+    let comments = [];
+    if (commentsResponse.ok) {
+      comments = await commentsResponse.json();
+    }
+
     return {
-      article: data.article,
+      article: articleData.article,
+      comments,
       success: true
     };
   } catch (error) {
     console.error('Error loading article:', error);
     return {
       article: null,
+      comments: [],
       success: false,
       error: error instanceof Error ? error.message : 'Failed to load article'
     };
