@@ -7,10 +7,10 @@
   import type { Article } from '../../../types/article';
   import ClubFilter from '$lib/components/ClubFilter.svelte';
 
-  export let data: { article: Article };
+  export let data: { article: Article, relatedArticles: any[], initialClub?: string };
 
   // Add club filter state
-  let selectedClub = data.initialClub;
+  let selectedClub = data.initialClub || 'All Clubs';
   const aleagueClubs = [
     'All Clubs',
     'Perth Glory',
@@ -27,12 +27,15 @@
   ];
 
   // Update related articles with club data
-  let relatedArticles = data.relatedArticles.map(article => ({
+  let relatedArticles = (data.relatedArticles || []).map(article => ({
     ...article,
-    publishDate: new Date(article.publishDate)
+    publishDate: new Date(article.publishDate),
+    club: article.club || 'Perth Glory' // Default to Perth Glory if club is missing
   }));
 
   function getFormattedDate(date: Date | string): string {
+    if (!date) return '';
+
     if (typeof date === 'string') {
       date = new Date(date);
     }
@@ -40,6 +43,8 @@
   }
 
   function getRelativeDate(date: Date | string): string {
+    if (!date) return '';
+
     if (typeof date === 'string') {
       date = new Date(date);
     }

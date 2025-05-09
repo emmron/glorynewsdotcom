@@ -1,10 +1,9 @@
 export interface Comment {
   id: string;
-  articleId: string;
   authorName: string;
   text: string;
-  createdAt: Date;
-  // parentId?: string; // Optional: for threaded comments
+  createdAt: Date | string;
+  articleId?: string;
 }
 
 export interface Reply {
@@ -19,6 +18,6 @@ export interface Reply {
 }
 
 export interface CommentFormData {
-  author: string;
-  content: string;
+  authorName: string;
+  text: string;
 }

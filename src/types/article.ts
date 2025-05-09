@@ -3,17 +3,18 @@ export interface Article {
   title: string;
   slug: string;
   content: string;
+  excerpt?: string;
+  summary?: string;
   publishDate: Date;
-  author: string;
-  category: string;
-  excerpt: string;
-  readTime?: number;
-  featuredImage?: string;
-  tags: string[];
-  sourceName?: string;
-  sourceUrl?: string;
   lastModified?: Date;
   scrapedAt?: Date;
-  isScraped?: boolean;
-  club: string;
+  tags?: string[];
+  featuredImage?: string;
+  imageUrl?: string;
+  author?: string;
+  sourceName?: string;
+  sourceUrl?: string;
+  readTime?: number;
+  category?: string;
+  club?: string;
 }
