@@ -1,14 +1,13 @@
 import type { Article, NewsSource } from '../types/news';
 import {
-  fetchWithTimeout,
+  fetchWithRetry,
   sanitizeContent,
   extractReadTime,
   countWords,
   extractImagesFromHTML,
-  parseHTML,
   InMemoryRateLimiter,
   slugify
-} from '../utils';
+} from '../utils/fetch';
 
 interface WordPressPost {
   id: number;
@@ -69,30 +68,25 @@ export class PerthGlorySource implements NewsSource {
 
   async fetch(): Promise<Article[]> {
     try {
-      // Acquire rate limit token
-      await this.rateLimiter.acquire();
-
-      // Fetch posts with embedded data
-      const response = await fetchWithTimeout(
+      // Fetch posts with embedded data using the retry pattern
+      const posts = await fetchWithRetry<WordPressPost[]>(
         `${this.apiUrl}?_embed&per_page=30`,
         {
           headers: {
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'User-Agent': 'GloryNews/1.0'
           }
-        }
+        },
+        3, // 3 retries
+        1000, // 1 second delay base
+        this.rateLimiter // Use our rate limiter
       );
 
-      const posts = await response.json() as WordPressPost[];
-
       // Transform WordPress posts to our Article format
-      const articles = posts.map(post => this.transformPost(post));
-
-      return articles;
+      return posts.map(post => this.transformPost(post));
     } catch (error) {
       console.error('Error fetching from Perth Glory:', error);
       return [];
-    } finally {
-      this.rateLimiter.release();
     }
   }
 
@@ -102,7 +96,7 @@ export class PerthGlorySource implements NewsSource {
     const tags = post._embedded?.['wp:term']?.[1]?.map(term => term.name) || [];
 
     // Extract author name
-    const author = post._embedded?.author?.[0]?.name;
+    const author = post._embedded?.author?.[0]?.name || 'Perth Glory FC';
 
     // Extract images
     const featuredImage = post._embedded?.['wp:featuredmedia']?.[0]?.source_url;
@@ -121,8 +115,11 @@ export class PerthGlorySource implements NewsSource {
     const wordCount = countWords(sanitizedContent);
     const readingTime = extractReadTime(sanitizedContent);
 
+    // Create unique ID
+    const id = `perthglory-${post.id}`;
+
     return {
-      id: post.id.toString(),
+      id,
       title: post.title.rendered,
       content: post.content.rendered,
       publishDate: new Date(post.date),
