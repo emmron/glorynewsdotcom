@@ -252,6 +252,7 @@
       <div class="mt-10 pt-8 border-t border-gray-700 text-gray-400 text-sm text-center">
         <p>© {new Date().getFullYear()} Perth Glory News | Not affiliated with Perth Glory Football Club</p>
         <p class="mt-2">This is an independent fan site providing news and information about Perth Glory FC.</p>
+        <p class="mt-2">Website by <a href="https://hoolahandigital.com.au" target="_blank" rel="noopener noreferrer" class="text-purple-300 hover:text-white transition-colors">hoolahandigital.com.au</a></p>
       </div>
     </div>
   </footer>

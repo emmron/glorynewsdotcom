@@ -114,16 +114,28 @@
 
 <div class="min-h-screen bg-gradient-to-b from-purple-100 to-white">
   <main class="container mx-auto px-4 py-8">
-    <header class="text-center mb-8" in:fly={{ y: -20, duration: 500 }}>
-      <h1 class="text-4xl md:text-5xl font-bold text-purple-900 mb-3">
-        Perth Glory News
-      </h1>
-      <p class="text-gray-600">Your source for the latest Perth Glory FC updates</p>
-    </header>
+    <!-- Enhanced Hero Section -->
+    <div class="relative overflow-hidden bg-purple-900 rounded-2xl shadow-xl mb-12">
+      <div class="absolute inset-0 opacity-20 bg-pattern"></div>
+      <div class="relative z-10 px-6 py-12 md:py-20 md:px-12 text-center">
+        <h1 class="text-4xl md:text-6xl font-bold text-white mb-4 tracking-tight">
+          Perth Glory News
+        </h1>
+        <p class="text-xl text-purple-200 max-w-2xl mx-auto">Your trusted source for the latest Perth Glory FC updates, match reports, and club news</p>
+        <div class="mt-8 flex flex-wrap justify-center gap-4">
+          <a href="/ladder" class="px-6 py-3 bg-white text-purple-900 font-semibold rounded-full hover:bg-purple-100 transition-colors shadow-md">
+            View League Ladder
+          </a>
+          <a href="/forum" class="px-6 py-3 bg-purple-700 text-white font-semibold rounded-full hover:bg-purple-600 transition-colors shadow-md border border-purple-500">
+            Join Fan Discussion
+          </a>
+        </div>
+      </div>
+    </div>
 
-    <div class="flex flex-wrap justify-center items-center mb-6 text-sm gap-2">
+    <div class="flex flex-wrap justify-center items-center mb-8 text-sm gap-2">
       <button
-        class="px-4 py-2 rounded-full {isAutoRefreshing ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'} hover:opacity-90 transition-colors"
+        class="px-4 py-2 rounded-full {isAutoRefreshing ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'} hover:opacity-90 transition-colors shadow-sm"
         on:click={toggleAutoRefresh}
       >
         {isAutoRefreshing ? 'Auto-Refresh: ON' : 'Auto-Refresh: OFF'}
@@ -134,7 +146,7 @@
         </div>
       {/if}
       <button
-        class="px-4 py-2 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+        class="px-4 py-2 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 shadow-sm"
         on:click={refreshData}
         disabled={loading || loadingRefresh}
       >
@@ -144,6 +156,8 @@
         <span>{loadingRefresh ? 'Refreshing...' : 'Refresh Now'}</span>
       </button>
     </div>
+
+    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 text-center">Latest News</h2>
 
     {#if loading && !loadingRefresh}
       <div
@@ -184,7 +198,7 @@
       >
         {#each articles as article, i}
           <article
-            class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full"
+            class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full transform hover:-translate-y-1"
             in:fly={{ y: 20, duration: 300, delay: Math.min(i * 100, 600) }}
           >
             {#if article.featuredImage}
@@ -198,6 +212,11 @@
                   width="600"
                   height="338"
                 />
+                {#if article.sourceName}
+                  <div class="absolute bottom-0 right-0 bg-purple-700 text-white text-xs px-2 py-1 m-2 rounded-md opacity-90">
+                    {article.sourceName}
+                  </div>
+                {/if}
               </div>
             {/if}
 
@@ -206,9 +225,9 @@
                 <time datetime={typeof article.publishDate === 'string' ? article.publishDate : article.publishDate?.toISOString()}>
                   {formatDate(article.publishDate)}
                 </time>
-                {#if article.sourceName}
+                {#if article.readTime}
                   <span class="mx-2">·</span>
-                  <span>{article.sourceName}</span>
+                  <span>{article.readTime} min read</span>
                 {/if}
               </div>
 
@@ -223,25 +242,20 @@
 
               <p class="text-gray-600 mb-4 line-clamp-3 flex-grow">{article.excerpt}</p>
 
-              <div class="flex justify-between items-center mt-auto pt-3 border-t border-gray-100">
-                <a
-                  href="/article/{article.slug}"
-                  class="inline-flex items-center text-purple-600 font-medium hover:text-purple-700 transition-colors group"
+              <a
+                href="/article/{article.slug}"
+                class="inline-flex items-center text-purple-600 font-medium hover:text-purple-700 transition-colors group mt-auto pt-3 border-t border-gray-100 w-full"
+              >
+                Read Full Article
+                <svg
+                  class="w-4 h-4 ml-2 transform group-hover:translate-x-1 transition-transform"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  Read More
-                  <svg
-                    class="w-4 h-4 ml-2 transform group-hover:translate-x-1 transition-transform"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </a>
-                {#if article.readTime}
-                  <span class="text-gray-500 text-sm">{article.readTime} min read</span>
-                {/if}
-              </div>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </a>
             </div>
           </article>
         {/each}
@@ -252,6 +266,7 @@
   <footer class="mt-12 py-6 bg-purple-900 text-white text-center text-sm">
     <div class="container mx-auto px-4">
       <p>© {new Date().getFullYear()} Perth Glory News | Not affiliated with Perth Glory Football Club</p>
+      <p class="mt-2">Website by <a href="https://hoolahandigital.com.au" target="_blank" rel="noopener noreferrer" class="text-purple-300 hover:text-white transition-colors">hoolahandigital.com.au</a></p>
     </div>
   </footer>
 </div>
@@ -282,5 +297,9 @@
   @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+  }
+
+  .bg-pattern {
+    background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E");
   }
 </style>
