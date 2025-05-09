@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import type { RequestHandler } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
 import { NewsFetcher } from '$lib/services/newsFetcher';
 import type { Article } from '$lib/types/news';
 import { sanitizeContent, extractReadTime, slugify } from '$lib/utils';
@@ -105,90 +105,49 @@ const getDefaultFrontendArticles = () => [
 ];
 
 export const GET: RequestHandler = async ({ url }) => {
+  const page = parseInt(url.searchParams.get('page') || '1');
+  const limit = parseInt(url.searchParams.get('limit') || '10');
+  const category = url.searchParams.get('category');
+
   try {
+    console.log(`Fetching news (page ${page}, limit ${limit}, category ${category || 'all'})`);
     const newsFetcher = new NewsFetcher();
-    const sourceParam = url.searchParams.get('source');
-    const categoryFilter = url.searchParams.get('category');
-    const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : 30;
+    const allArticles = await newsFetcher.getAllArticles();
 
-    let fetchedArticles: Article[] = [];
-
-    if (sourceParam) {
-      fetchedArticles = await newsFetcher.fetchArticles(sourceParam);
-      if (fetchedArticles.length > limit) fetchedArticles = fetchedArticles.slice(0, limit);
-    } else {
-      const primarySources = DATA_SOURCES.primary;
-      const articlesPromises = primarySources.map(src =>
-        newsFetcher.fetchArticles(src)
-      );
-
-      const results = await Promise.allSettled(articlesPromises);
-
-      results.forEach(result => {
-        if (result.status === 'fulfilled' && result.value) {
-          fetchedArticles.push(...result.value);
-        } else if (result.status === 'rejected') {
-          console.warn(`Failed to fetch from a source: ${result.reason}`);
-        }
-      });
-
-      if (categoryFilter) {
-        fetchedArticles = fetchedArticles.filter(article =>
+    // Filter by category if provided
+    const filteredArticles = category
+      ? allArticles.filter(article =>
           article.categories.some(cat =>
-            cat.toLowerCase() === categoryFilter.toLowerCase()
+            cat.toLowerCase() === category.toLowerCase()
           )
-        );
-      }
+        )
+      : allArticles;
 
-      fetchedArticles = fetchedArticles
-        .sort((a, b) => {
-          const dateA = a.publishDate instanceof Date ? a.publishDate : new Date(a.publishDate);
-          const dateB = b.publishDate instanceof Date ? b.publishDate : new Date(b.publishDate);
-          return dateB.getTime() - dateA.getTime();
-        })
-        .slice(0, limit);
-    }
+    // Calculate pagination
+    const totalArticles = filteredArticles.length;
+    const totalPages = Math.ceil(totalArticles / limit);
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedArticles = filteredArticles.slice(startIndex, endIndex);
 
-    if (fetchedArticles.length === 0 && !sourceParam) {
-      console.warn('No articles fetched from live sources. Serving default articles.');
-      const defaultArticles = getDefaultFrontendArticles();
-      return json({
-        success: true,
-        articles: defaultArticles,
-        count: defaultArticles.length,
-        sources: ['default'],
-        timestamp: new Date().toISOString(),
-        message: 'Currently displaying placeholder content as no live articles were found. Please check back later.'
-      }, { headers: { 'Cache-Control': 'no-cache' } });
-    }
-
-    const transformedArticles = fetchedArticles.map(transformArticleForResponse);
+    console.log(`Returning ${paginatedArticles.length} articles (page ${page}/${totalPages})`);
 
     return json({
-      success: true,
-      articles: transformedArticles,
-      count: transformedArticles.length,
-      sources: sourceParam ? [sourceParam] : DATA_SOURCES.primary,
-      timestamp: new Date().toISOString()
-    }, {
-      headers: {
-        'Cache-Control': 'public, max-age=900' // 15 minutes cache
+      articles: paginatedArticles,
+      pagination: {
+        page,
+        limit,
+        totalArticles,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
       }
     });
   } catch (error) {
-    console.error('Error in GET /api/news:', error);
-    const defaultArticles = getDefaultFrontendArticles();
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error("Error fetching news:", error);
     return json({
-      success: true,
-      articles: defaultArticles,
-      count: defaultArticles.length,
-      sources: ['default_error'],
-      timestamp: new Date().toISOString(),
-      message: `Failed to load live news (${errorMessage}). Displaying placeholder content.`
-    }, {
-      headers: { 'Cache-Control': 'no-cache' },
-      status: 200
-    });
+      error: "Failed to fetch news articles",
+      message: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 500 });
   }
 };

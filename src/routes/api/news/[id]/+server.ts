@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import type { RequestHandler } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
 import { NewsFetcher } from '$lib/services/newsFetcher';
 import type { Article } from '$lib/types/news';
 
@@ -37,43 +37,29 @@ function transformArticleForResponse(article: Article) {
 }
 
 export const GET: RequestHandler = async ({ params }) => {
+  const { id } = params;
+
+  if (!id) {
+    return json({ error: "Article ID is required" }, { status: 400 });
+  }
+
   try {
-    const { id } = params;
-
-    if (!id) {
-      return json({
-        success: false,
-        error: 'Article ID is required',
-        timestamp: new Date().toISOString()
-      }, { status: 400 });
-    }
-
+    console.log(`Fetching article with ID: ${id}`);
     const newsFetcher = new NewsFetcher();
     const article = await newsFetcher.getArticleById(id);
 
     if (!article) {
-      return json({
-        success: false,
-        error: 'Article not found',
-        timestamp: new Date().toISOString()
-      }, { status: 404 });
+      console.log(`Article with ID ${id} not found`);
+      return json({ error: "Article not found" }, { status: 404 });
     }
 
-    // Transform for response
-    const transformedArticle = transformArticleForResponse(article);
-
-    return json({
-      success: true,
-      article: transformedArticle,
-      timestamp: new Date().toISOString()
-    });
+    console.log(`Returning article: ${article.title}`);
+    return json({ article });
   } catch (error) {
-    console.error(`Error fetching article:`, error);
-
+    console.error(`Error fetching article ${id}:`, error);
     return json({
-      success: false,
-      error: 'Failed to fetch article',
-      timestamp: new Date().toISOString()
+      error: "Failed to fetch article",
+      message: error instanceof Error ? error.message : "Unknown error"
     }, { status: 500 });
   }
 };
