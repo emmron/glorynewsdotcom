@@ -27,7 +27,7 @@ function transformArticleForResponse(article: Article) {
   const category = article.categories?.[0] || 'News';
   const author = article.author || 'PGN Team';
   const sourceUrl = article.sourceUrl || '#';
-  const sourceName = article.metadata?.sourceName || 'Perth Glory News'; // Assuming sourceName might be in metadata
+  const sourceName = (article as any).sourceName || article.metadata?.source || 'Perth Glory News';
   const tags = article.tags || [];
 
   // Generated fields
@@ -50,7 +50,7 @@ function transformArticleForResponse(article: Article) {
     author: author,
     readTime: readTime,
     tags: tags,
-    source: sourceName, // Consistent with sourceName
+    source: sourceName,
     sourceUrl: sourceUrl,
     // isScraped & scrapedAt are not part of the base Article type from Zod, handle if available or omit
     isScraped: (article as any).isScraped || false, // Use type assertion if these are added dynamically
