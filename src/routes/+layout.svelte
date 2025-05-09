@@ -44,6 +44,7 @@
 <svelte:head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#9333EA" />
+  <meta name="google-site-verification" content="aLeFo6wPsOzI7R6wIe_Z7kfBs5SMOG426ccuMVrnWjs" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/images/pwa/icon-192x192.png" />
   {#if !dev}
