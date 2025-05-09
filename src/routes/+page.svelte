@@ -6,8 +6,8 @@
   import { invalidateAll } from '$app/navigation';
   import SEO from '$lib/components/SEO.svelte';
 
-  // Define the expected shape of the data prop
-  export let data: { articles: Article[] };
+  // Updated data prop type to include apiMessage
+  export let data: { articles: Article[]; timestamp?: string; apiMessage?: string };
 
   let articles: Article[] = [];
   let loading = false;
@@ -16,33 +16,32 @@
   let lastRefreshed: Date | null = null;
   let isAutoRefreshing = true;
   let loadingRefresh = false;
+  let apiMessage: string | undefined = undefined;
 
-  // Sync data from load function
   $: {
     articles = data.articles || [];
-
-    // If we have articles, update lastRefreshed
-    if (articles.length > 0 && !lastRefreshed) {
-      lastRefreshed = new Date();
+    apiMessage = data.apiMessage;
+    if (articles.length > 0 && !lastRefreshed && !apiMessage) {
+      lastRefreshed = data.timestamp ? new Date(data.timestamp) : new Date();
     }
   }
 
   async function refreshData(): Promise<void> {
     loadingRefresh = true;
+    error = null;
+    apiMessage = undefined;
     try {
-      // Use invalidateAll to refresh all data
       await invalidateAll();
-      lastRefreshed = new Date();
     } catch (e) {
       console.error('Error refreshing news:', e);
+      error = e instanceof Error ? e.message : 'Failed to refresh news';
     } finally {
       loadingRefresh = false;
     }
   }
 
   function startAutoRefresh() {
-    // Auto-refresh every 15 minutes
-    const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutes
+    const REFRESH_INTERVAL = 15 * 60 * 1000;
 
     isAutoRefreshing = true;
 
@@ -69,6 +68,9 @@
 
   onMount(() => {
     startAutoRefresh();
+    if (data.articles && data.articles.length > 0 && !data.apiMessage && data.timestamp) {
+      lastRefreshed = new Date(data.timestamp);
+    }
   });
 
   onDestroy(() => {
@@ -82,7 +84,6 @@
       } else if (date instanceof Date) {
         return format(date, 'MMM d, yyyy');
       } else {
-        // Explicitly handle undefined or null, though type should prevent this
         if (date === null || date === undefined) {
           console.warn('formatDate received null or undefined date');
           return 'Date unavailable';
@@ -114,7 +115,6 @@
 
 <div class="min-h-screen bg-gradient-to-b from-purple-100 to-white">
   <main class="container mx-auto px-4 py-8">
-    <!-- Enhanced Hero Section with Background Image -->
     <div class="relative overflow-hidden bg-purple-900 rounded-2xl shadow-xl mb-12">
       <div class="absolute inset-0 opacity-30 bg-pattern"></div>
       <div class="absolute inset-0 bg-gradient-to-r from-purple-900 via-purple-800 to-purple-900 opacity-90"></div>
@@ -150,13 +150,11 @@
           </a>
         </div>
       </div>
-      <!-- Decorative elements -->
       <div class="absolute bottom-0 left-0 w-full h-6 bg-white opacity-10"></div>
       <div class="absolute -bottom-3 -left-3 w-24 h-24 rounded-full bg-purple-600 opacity-20"></div>
       <div class="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-purple-400 opacity-20"></div>
     </div>
 
-    <!-- Refined refresh controls -->
     <div class="flex flex-wrap justify-center items-center mb-10 text-sm gap-3">
       <div class="bg-white p-1 rounded-full shadow-md flex items-center">
         <button
@@ -186,7 +184,17 @@
       </div>
     </div>
 
-    <!-- Latest News Section with Enhanced Title -->
+    {#if apiMessage}
+      <div class="mb-6 p-4 bg-yellow-100 border border-yellow-300 text-yellow-700 rounded-lg text-center shadow-sm" role="alert">
+        <div class="flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-yellow-600" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M8.257 3.099c.636-1.178 2.85-1.178 3.486 0l5.58 10.306c.636 1.178-.474 2.595-1.743 2.595H4.42c-1.269 0-2.379-1.417-1.743-2.595l5.58-10.306zM9 11a1 1 0 112 0v2a1 1 0 11-2 0v-2zm1-5.75a.75.75 0 00-.75.75v2.5a.75.75 0 001.5 0v-2.5a.75.75 0 00-.75-.75z" clip-rule="evenodd" />
+          </svg>
+          <span>{apiMessage}</span>
+        </div>
+      </div>
+    {/if}
+
     <div class="relative text-center mb-10">
       <h2 class="text-2xl md:text-3xl font-bold text-gray-800 inline-block relative">
         Latest News
@@ -214,13 +222,14 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <div>
-            <strong class="font-medium text-lg block mb-1">Error loading news</strong>
+            <strong class="font-medium text-lg block mb-1">Could not refresh news</strong>
             <span class="text-red-600">{error}</span>
           </div>
         </div>
         <button
           class="mt-4 px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center mx-auto"
           on:click={refreshData}
+          disabled={loadingRefresh}
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -228,7 +237,7 @@
           Retry
         </button>
       </div>
-    {:else if articles.length === 0}
+    {:else if articles.length === 0 && !apiMessage}
       <div class="text-center p-12 bg-yellow-50 rounded-xl shadow-sm max-w-2xl mx-auto">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-yellow-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -316,7 +325,6 @@
         {/each}
       </div>
 
-      <!-- Newsletter signup section -->
       <div class="mt-16 bg-purple-800 rounded-xl shadow-xl overflow-hidden">
         <div class="relative px-6 py-12 md:py-16 md:px-12 text-center">
           <div class="absolute inset-0 opacity-10 bg-pattern"></div>

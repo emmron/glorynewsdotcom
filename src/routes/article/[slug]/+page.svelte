@@ -365,7 +365,10 @@
   }
 
   .article-content :global(a) {
-    @apply text-purple-600 hover:underline;
+    @apply text-purple-600;
+  }
+  .article-content :global(a:hover) {
+    @apply underline;
   }
 
   .article-content :global(ul),
