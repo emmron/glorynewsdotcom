@@ -1,6 +1,29 @@
-import crypto from 'crypto';
 import type { Article, NewsSource } from '../types/news';
-import { CACHE_CONFIG } from '../types/news';
+
+interface KeepUpPost {
+  id: number;
+  date: string;
+  title: { rendered: string };
+  content: { rendered: string };
+  link: string;
+  _embedded?: {
+    author?: Array<{ name: string }>;
+    'wp:featuredmedia'?: Array<{
+      source_url: string;
+      media_details?: {
+        sizes?: {
+          medium?: { source_url: string };
+          large?: { source_url: string };
+          thumbnail?: { source_url: string };
+        }
+      }
+    }>;
+    'wp:term'?: Array<Array<{
+      name: string;
+      taxonomy: string;
+    }>>;
+  };
+}
 
 export class KeepUpSource implements NewsSource {
   private baseUrl = 'https://keepup.com.au/wp-json/wp/v2';
@@ -10,19 +33,27 @@ export class KeepUpSource implements NewsSource {
    */
   public async fetch(): Promise<Article[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/posts?per_page=20&_embed`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'GloryNews/1.0'
+      console.log(`Fetching from KeepUp source...`);
+
+      const response = await fetch(
+        `${this.baseUrl}/posts?per_page=20&_embed&search=perth+glory`,
+        {
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'GloryNews/1.0'
+          },
+          method: 'GET',
+          signal: AbortSignal.timeout(10000) // 10 second timeout
         }
-      });
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
 
-      const posts = await response.json();
+      const posts = await response.json() as KeepUpPost[];
+      console.log(`Got ${posts.length} posts from KeepUp source`);
+
       return this.transformPosts(posts);
     } catch (error) {
       console.error('Error fetching KeepUp news:', error);
@@ -33,12 +64,14 @@ export class KeepUpSource implements NewsSource {
   /**
    * Transforms WordPress posts to our unified Article format
    */
-  private transformPosts(posts: any[]): Article[] {
+  private transformPosts(posts: KeepUpPost[]): Article[] {
     return posts.map(post => {
-      // Extract categories
-      const categories = post._embedded?.['wp:term']?.[0]?.map((term: any) => term.name) || ['A-League'];
+      // Extract categories and tags
+      const terms = post._embedded?.['wp:term'] || [];
+      const categories = terms[0]?.map(term => term.name) || ['A-League'];
+      const tags = terms[1]?.map(term => term.name) || [];
 
-      // Get team mentioned in the title/content if any
+      // Get team mentioned in the title/content
       const teamName = this.detectTeam(post.title.rendered, post.content.rendered);
       if (teamName && !categories.includes(teamName)) {
         categories.push(teamName);
@@ -46,12 +79,16 @@ export class KeepUpSource implements NewsSource {
 
       // Get featured image
       const featuredImage = post._embedded?.['wp:featuredmedia']?.[0]?.source_url || '';
-      const featuredImageMedium = post._embedded?.['wp:featuredmedia']?.[0]?.media_details?.sizes?.medium?.source_url || '';
+      const thumbnails = {
+        medium: post._embedded?.['wp:featuredmedia']?.[0]?.media_details?.sizes?.medium?.source_url || '',
+        large: post._embedded?.['wp:featuredmedia']?.[0]?.media_details?.sizes?.large?.source_url || '',
+        small: post._embedded?.['wp:featuredmedia']?.[0]?.media_details?.sizes?.thumbnail?.source_url || ''
+      };
 
       // Calculate word count and reading time
-      const content = post.content.rendered.replace(/<[^>]+>/g, '');
-      const wordCount = content.split(/\s+/).length;
-      const readingTime = Math.max(1, Math.floor(wordCount / 200)); // Average 200 words per minute
+      const sanitizedContent = this.sanitizeContent(post.content.rendered);
+      const wordCount = this.countWords(sanitizedContent);
+      const readingTime = this.calculateReadTime(wordCount);
 
       // Generate unique ID based on source and post ID
       const id = `keepup-${post.id}`;
@@ -65,18 +102,16 @@ export class KeepUpSource implements NewsSource {
         author: post._embedded?.author?.[0]?.name || 'KeepUp',
         images: {
           featured: featuredImage,
-          thumbnails: {
-            medium: featuredImageMedium || featuredImage
-          }
+          thumbnails
         },
         categories,
-        tags: post._embedded?.['wp:term']?.[1]?.map((term: any) => term.name) || [],
+        tags,
         metadata: {
           wordCount,
           readingTime,
           isSponsored: false,
           source: 'partner',
-          priority: 2,
+          priority: 2
         }
       };
     });
@@ -122,5 +157,18 @@ export class KeepUpSource implements NewsSource {
     }
 
     return maxMatches > 0 ? bestMatch : null;
+  }
+
+  // Helper functions
+  private sanitizeContent(html: string): string {
+    return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  private countWords(text: string): number {
+    return text.split(/\s+/).filter(Boolean).length;
+  }
+
+  private calculateReadTime(wordCount: number): number {
+    return Math.max(1, Math.ceil(wordCount / 200));
   }
 }

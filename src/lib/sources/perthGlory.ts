@@ -1,13 +1,4 @@
 import type { Article, NewsSource } from '../types/news';
-import {
-  fetchWithRetry,
-  sanitizeContent,
-  extractReadTime,
-  countWords,
-  extractImagesFromHTML,
-  InMemoryRateLimiter,
-  slugify
-} from '../utils/fetch';
 
 interface WordPressPost {
   id: number;
@@ -64,23 +55,30 @@ interface WordPressPost {
 export class PerthGlorySource implements NewsSource {
   private readonly baseUrl = 'https://www.perthglory.com.au';
   private readonly apiUrl = 'https://www.perthglory.com.au/wp-json/wp/v2/posts';
-  private readonly rateLimiter = new InMemoryRateLimiter(2, 10000); // 2 requests per 10 seconds
 
   async fetch(): Promise<Article[]> {
     try {
-      // Fetch posts with embedded data using the retry pattern
-      const posts = await fetchWithRetry<WordPressPost[]>(
+      console.log(`Fetching from Perth Glory source...`);
+
+      // Fetch posts with embedded data
+      const response = await fetch(
         `${this.apiUrl}?_embed&per_page=30`,
         {
           headers: {
             'Accept': 'application/json',
             'User-Agent': 'GloryNews/1.0'
-          }
-        },
-        3, // 3 retries
-        1000, // 1 second delay base
-        this.rateLimiter // Use our rate limiter
+          },
+          method: 'GET',
+          signal: AbortSignal.timeout(10000) // 10 second timeout
+        }
       );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const posts = await response.json() as WordPressPost[];
+      console.log(`Got ${posts.length} posts from Perth Glory source`);
 
       // Transform WordPress posts to our Article format
       return posts.map(post => this.transformPost(post));
@@ -107,13 +105,13 @@ export class PerthGlorySource implements NewsSource {
     };
 
     // Extract additional images from content
-    const contentImages = extractImagesFromHTML(post.content.rendered)
+    const contentImages = this.extractImagesFromHTML(post.content.rendered)
       .filter(url => url !== featuredImage);
 
     // Count words and calculate reading time
-    const sanitizedContent = sanitizeContent(post.content.rendered);
-    const wordCount = countWords(sanitizedContent);
-    const readingTime = extractReadTime(sanitizedContent);
+    const sanitizedContent = this.sanitizeContent(post.content.rendered);
+    const wordCount = this.countWords(sanitizedContent);
+    const readingTime = this.calculateReadTime(wordCount);
 
     // Create unique ID
     const id = `perthglory-${post.id}`;
@@ -140,5 +138,32 @@ export class PerthGlorySource implements NewsSource {
         priority: 1
       }
     };
+  }
+
+  // Helper functions
+  private sanitizeContent(html: string): string {
+    return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  private countWords(text: string): number {
+    return text.split(/\s+/).filter(Boolean).length;
+  }
+
+  private calculateReadTime(wordCount: number): number {
+    return Math.max(1, Math.ceil(wordCount / 200));
+  }
+
+  private extractImagesFromHTML(html: string): string[] {
+    const srcRegex = /<img[^>]+src\s*=\s*['"]([^'"]+)['"]/g;
+    const images: string[] = [];
+    let match;
+
+    while ((match = srcRegex.exec(html)) !== null) {
+      if (match[1]) {
+        images.push(match[1]);
+      }
+    }
+
+    return images;
   }
 }
