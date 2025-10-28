@@ -105,11 +105,14 @@ const getDefaultFrontendArticles = () => [
 ];
 
 export const GET: RequestHandler = async ({ url }) => {
-  const page = parseInt(url.searchParams.get('page') || '1');
-  const limit = parseInt(url.searchParams.get('limit') || '10');
+  const requestedPage = parseInt(url.searchParams.get('page') || '1', 10);
+  const requestedLimit = parseInt(url.searchParams.get('limit') || '10', 10);
   const category = url.searchParams.get('category');
 
   try {
+    const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    const limit = Number.isFinite(requestedLimit) && requestedLimit > 0 ? requestedLimit : 10;
+
     console.log(`Fetching news (page ${page}, limit ${limit}, category ${category || 'all'})`);
     const newsFetcher = new NewsFetcher();
     const allArticles = await newsFetcher.getAllArticles();
@@ -117,35 +120,60 @@ export const GET: RequestHandler = async ({ url }) => {
     // Filter by category if provided
     const filteredArticles = category
       ? allArticles.filter(article =>
+          Array.isArray(article.categories) &&
           article.categories.some(cat =>
             cat.toLowerCase() === category.toLowerCase()
           )
         )
       : allArticles;
 
+    if (filteredArticles.length === 0) {
+      console.warn('No articles available, returning frontend defaults');
+      const fallbackArticles = getDefaultFrontendArticles();
+
+      return json({
+        success: true,
+        timestamp: new Date().toISOString(),
+        articles: fallbackArticles,
+        pagination: {
+          page: 1,
+          limit: fallbackArticles.length,
+          totalArticles: fallbackArticles.length,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false
+        }
+      });
+    }
+
     // Calculate pagination
     const totalArticles = filteredArticles.length;
-    const totalPages = Math.ceil(totalArticles / limit);
-    const startIndex = (page - 1) * limit;
+    const totalPages = Math.max(1, Math.ceil(totalArticles / limit));
+    const currentPage = Math.min(page, totalPages);
+    const startIndex = (currentPage - 1) * limit;
     const endIndex = startIndex + limit;
     const paginatedArticles = filteredArticles.slice(startIndex, endIndex);
 
-    console.log(`Returning ${paginatedArticles.length} articles (page ${page}/${totalPages})`);
+    console.log(`Returning ${paginatedArticles.length} articles (page ${currentPage}/${totalPages})`);
 
     return json({
-      articles: paginatedArticles,
+      success: true,
+      timestamp: new Date().toISOString(),
+      articles: paginatedArticles.map(transformArticleForResponse),
       pagination: {
-        page,
+        page: currentPage,
         limit,
         totalArticles,
         totalPages,
-        hasNext: page < totalPages,
-        hasPrev: page > 1
+        hasNext: currentPage < totalPages,
+        hasPrev: currentPage > 1
       }
     });
   } catch (error) {
     console.error("Error fetching news:", error);
     return json({
+      success: false,
+      timestamp: new Date().toISOString(),
       error: "Failed to fetch news articles",
       message: error instanceof Error ? error.message : "Unknown error"
     }, { status: 500 });
