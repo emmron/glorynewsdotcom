@@ -1,7 +1,5 @@
 <script lang="ts">
-  import { page } from '$app/stores';
   import SEO from '$lib/components/SEO.svelte';
-  import { onMount } from 'svelte';
   import type { PageData } from './$types';
 
   export let data: PageData;
@@ -9,6 +7,7 @@
   // Extract data from the loaded data
   $: category = data.category;
   $: threads = data.threads;
+  $: isLoggedIn = Boolean(data.user);
 
   // Sorting options
   let sortBy = 'recent';
@@ -63,16 +62,6 @@
     return `${years} year${years !== 1 ? 's' : ''} ago`;
   }
 
-  // User state (simplified - would use auth service in production)
-  let isLoggedIn = false;
-
-  onMount(() => {
-    // Check if user is already logged in
-    const savedUser = localStorage.getItem('forum_user');
-    if (savedUser) {
-      isLoggedIn = true;
-    }
-  });
 </script>
 
 <SEO
@@ -106,7 +95,13 @@
 
         <div class="flex items-center space-x-3">
           <a href="/forum" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm">Back to Forum</a>
-          <a href="/forum/new-topic?category={category.id}" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm">New Topic</a>
+          {#if isLoggedIn}
+            <a href={`/forum/new-topic?category=${category.id}`} class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm">New Topic</a>
+          {:else}
+            <button class="bg-gray-300 text-gray-600 px-3 py-1 rounded text-sm cursor-not-allowed" title="Please log in to create a new topic">
+              New Topic
+            </button>
+          {/if}
         </div>
       </div>
 

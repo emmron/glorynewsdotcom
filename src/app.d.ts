@@ -7,12 +7,22 @@ declare namespace App {
 		user?: {
 			id: string;
 			email: string;
+			username: string;
+			createdAt: string;
+			updatedAt: string;
 		};
 		session?: Record<string, any>;
 	}
 
 	interface PageData {
 		// Add properties that will be available to all pages
+		user?: {
+			id: string;
+			email: string;
+			username: string;
+			createdAt: string;
+			updatedAt: string;
+		} | null;
 		title?: string;
 		meta?: {
 			description?: string;

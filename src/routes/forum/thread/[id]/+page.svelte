@@ -2,7 +2,6 @@
   import { page } from '$app/stores';
   import { fade, fly } from 'svelte/transition';
   import SEO from '$lib/components/SEO.svelte';
-  import { onMount } from 'svelte';
   import type { PageData } from './$types';
   import { addReply } from '$lib/services/forumService';
   import type { ForumReply } from '$lib/types/forum';
@@ -15,20 +14,12 @@
   $: replies = data.replies;
   $: loading = !thread;
   $: error = !thread ? 'Thread not found' : '';
-
-  // User state (simplified - would use auth service in production)
-  let isLoggedIn = false;
-  let username = '';
+  $: currentUser = data.user ?? null;
+  $: isLoggedIn = Boolean(currentUser);
+  $: displayUsername = currentUser?.username ?? '';
   let replyContent = '';
   let submitting = false;
   let postSuccess = false;
-
-  function handleLogin() {
-    if (username.trim()) {
-      isLoggedIn = true;
-      localStorage.setItem('forum_user', username);
-    }
-  }
 
   function formatTimeAgo(date: Date): string {
     const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
@@ -89,48 +80,49 @@
   }
 
   async function handleReply() {
-    // In a real app, this would send the reply to the server
-    if (replyContent.trim() && thread) {
-      submitting = true;
-      postSuccess = false;
+    if (!replyContent.trim() || !thread || !displayUsername || thread.isLocked) {
+      return;
+    }
 
-      try {
-        const newReply: Omit<ForumReply, 'id'> = {
-          threadId: thread.id,
-          author: username,
-          authorAvatar: null,
-          createdAt: new Date(),
-          content: replyContent,
-          likes: 0,
-          isEdited: false
-        };
+    submitting = true;
+    postSuccess = false;
 
-        // Add the reply to storage
-        const addedReply = addReply(newReply);
+    try {
+      const newReply: Omit<ForumReply, 'id'> = {
+        threadId: thread.id,
+        author: displayUsername,
+        authorAvatar: null,
+        createdAt: new Date(),
+        content: replyContent,
+        likes: 0,
+        isEdited: false
+      };
 
-        // Update local state with the new reply
-        replies = [...replies, addedReply];
+      // Add the reply to storage
+      const addedReply = addReply(newReply);
 
-        replyContent = '';
-        postSuccess = true;
+      // Update local state with the new reply
+      replies = [...replies, addedReply];
 
-        // Scroll to the newly added reply
-        setTimeout(() => {
-          const newReplyElement = document.getElementById(`reply-${addedReply.id}`);
-          if (newReplyElement) {
-            newReplyElement.scrollIntoView({ behavior: 'smooth' });
-          }
-        }, 100);
+      replyContent = '';
+      postSuccess = true;
 
-        // Refresh the page after a brief delay to show updated data
-        setTimeout(() => {
-          postSuccess = false;
-        }, 3000);
-      } catch (e) {
-        alert('There was an error posting your reply. Please try again.');
-      } finally {
-        submitting = false;
-      }
+      // Scroll to the newly added reply
+      setTimeout(() => {
+        const newReplyElement = document.getElementById(`reply-${addedReply.id}`);
+        if (newReplyElement) {
+          newReplyElement.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+
+      // Refresh the page after a brief delay to show updated data
+      setTimeout(() => {
+        postSuccess = false;
+      }, 3000);
+    } catch (e) {
+      alert('There was an error posting your reply. Please try again.');
+    } finally {
+      submitting = false;
     }
   }
 
@@ -138,14 +130,6 @@
     goto(`/forum/thread/${$page.params.id}`, { invalidateAll: true });
   }
 
-  onMount(() => {
-    // Check if user is already logged in
-    const savedUser = localStorage.getItem('forum_user');
-    if (savedUser) {
-      isLoggedIn = true;
-      username = savedUser;
-    }
-  });
 </script>
 
 <SEO
@@ -351,12 +335,14 @@
               </div>
               <div class="flex justify-between items-center">
                 <div class="text-sm text-gray-600">
-                  <span>Posting as <strong>{username}</strong></span>
+                  <span>Posting as <strong>{displayUsername}</strong></span>
                 </div>
                 <button
                   type="submit"
-                  class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded font-medium flex items-center"
-                  disabled={submitting}
+                  class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded font-medium flex items-center transition"
+                  class:opacity-75={submitting || !replyContent.trim()}
+                  class:cursor-not-allowed={submitting || !replyContent.trim()}
+                  disabled={submitting || !replyContent.trim()}
                 >
                   {#if submitting}
                     <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -373,23 +359,15 @@
           {:else}
             <div class="bg-gray-50 p-4 rounded-md text-center">
               <p class="text-gray-700 mb-3">You need to be logged in to reply to this thread.</p>
-              <div class="flex flex-col sm:flex-row justify-center gap-3">
-                <input
-                  type="text"
-                  placeholder="Your username"
-                  bind:value={username}
-                  class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-purple-500"
-                />
-                <button
-                  on:click={handleLogin}
-                  class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded font-medium"
-                >
-                  Quick Login
-                </button>
-                <div class="text-sm text-gray-600 flex items-center justify-center mt-2 sm:mt-0">
-                  <span class="italic">(Demo purposes only)</span>
-                </div>
-              </div>
+              <a
+                href="/forum"
+                class="inline-flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded font-medium transition"
+              >
+                Go to login
+              </a>
+              <p class="mt-2 text-xs text-gray-500">
+                Log in from the forum homepage to join the discussion.
+              </p>
             </div>
           {/if}
         </div>

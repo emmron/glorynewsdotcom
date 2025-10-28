@@ -2,11 +2,17 @@
   import '../app.css';
   import { dev } from '$app/environment';
   import { page } from '$app/stores';
+  import { invalidateAll } from '$app/navigation';
   import { onMount } from 'svelte';
   import registerServiceWorker from '$lib/pwa/registerServiceWorker';
+  import type { PageData } from './$types';
+
+  export let data: PageData;
 
   let darkMode = false;
   let mobileMenuOpen = false;
+  let loggingOut = false;
+  $: isAuthenticated = Boolean(data.user);
 
   const navLinks = [
     { href: '/#discover', label: 'Discover' },
@@ -40,6 +46,21 @@
 
   const toggleMobileMenu = () => {
     mobileMenuOpen = !mobileMenuOpen;
+  };
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+
+    loggingOut = true;
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      await invalidateAll();
+    } catch (error) {
+      console.error('Failed to log out', error);
+    } finally {
+      loggingOut = false;
+      mobileMenuOpen = false;
+    }
   };
 
   $: currentPath = $page.url.pathname;
@@ -105,18 +126,35 @@
             </svg>
           {/if}
         </button>
-        <a
-          href="#"
-          class="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:text-slate-200"
-        >
-          Log in
-        </a>
-        <a
-          href="#join"
-          class="rounded-full bg-gradient-to-br from-sky-500 to-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-500/30 transition hover:-translate-y-0.5 hover:shadow-xl"
-        >
-          Join free
-        </a>
+        {#if isAuthenticated}
+          <span class="text-sm font-medium text-slate-600 dark:text-slate-200">
+            Hi, {data.user?.username}
+          </span>
+          <button
+            class="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:text-slate-200"
+            on:click={handleLogout}
+            disabled={loggingOut}
+          >
+            {#if loggingOut}
+              Logging out…
+            {:else}
+              Log out
+            {/if}
+          </button>
+        {:else}
+          <a
+            href="/forum"
+            class="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:text-slate-200"
+          >
+            Log in
+          </a>
+          <a
+            href="#join"
+            class="rounded-full bg-gradient-to-br from-sky-500 to-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-500/30 transition hover:-translate-y-0.5 hover:shadow-xl"
+          >
+            Join free
+          </a>
+        {/if}
       </div>
 
       <div class="flex items-center gap-2 lg:hidden">
@@ -161,12 +199,29 @@
               {link.label}
             </a>
           {/each}
-          <a href="#" class="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200">
-            Log in
-          </a>
-          <a href="#join" class="rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/30">
-            Join free
-          </a>
+          {#if isAuthenticated}
+            <div class="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-600 dark:border-slate-700 dark:text-slate-200">
+              Signed in as <span class="font-semibold">{data.user?.username}</span>
+            </div>
+            <button
+              class="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              on:click={handleLogout}
+              disabled={loggingOut}
+            >
+              {#if loggingOut}
+                Logging out…
+              {:else}
+                Log out
+              {/if}
+            </button>
+          {:else}
+            <a href="/forum" class="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200">
+              Log in
+            </a>
+            <a href="#join" class="rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/30">
+              Join free
+            </a>
+          {/if}
         </div>
       </div>
     {/if}

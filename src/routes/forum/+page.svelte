@@ -1,6 +1,6 @@
 <script lang="ts">
   import SEO from '$lib/components/SEO.svelte';
-  import { onMount } from 'svelte';
+  import { invalidateAll } from '$app/navigation';
   import type { PageData } from './$types';
 
   export let data: PageData;
@@ -8,6 +8,19 @@
   // Extract categories and recent threads from the loaded data
   $: categories = data.categories;
   $: recentThreads = data.recentThreads;
+  $: currentUser = data.user ?? null;
+  $: isLoggedIn = Boolean(currentUser);
+  let loginForm = {
+    identifier: '',
+    password: ''
+  };
+  let loginError = '';
+  let loginLoading = false;
+  let logoutError = '';
+  let logoutLoading = false;
+  $: displayUsername = currentUser?.username ?? '';
+  $: displayInitial = displayUsername ? displayUsername.charAt(0).toUpperCase() : 'U';
+  $: displayEmail = currentUser?.email ?? '';
 
   function formatTimeAgo(date: Date): string {
     const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
@@ -34,33 +47,60 @@
     return categories.find(cat => cat.id === categoryId);
   }
 
-  // User state (simplified - would use auth service in production)
-  let isLoggedIn = false;
-  let username = '';
-  let password = '';
+  async function handleLogin() {
+    loginError = '';
+    loginLoading = true;
 
-  function handleLogin() {
-    if (username.trim() && password.trim()) {
-      isLoggedIn = true;
-      localStorage.setItem('forum_user', username);
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(loginForm)
+      });
+
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        loginError = typeof result.error === 'string' ? result.error : 'Unable to log in right now.';
+        return;
+      }
+
+      loginForm.identifier = '';
+      loginForm.password = '';
+      await invalidateAll();
+    } catch (error) {
+      console.error('Login failed', error);
+      loginError = 'Unable to log in right now. Please try again.';
+    } finally {
+      loginLoading = false;
     }
   }
 
-  function handleLogout() {
-    isLoggedIn = false;
-    username = '';
-    password = '';
-    localStorage.removeItem('forum_user');
-  }
+  async function handleLogout() {
+    if (logoutLoading) return;
 
-  onMount(() => {
-    // Check if user is already logged in
-    const savedUser = localStorage.getItem('forum_user');
-    if (savedUser) {
-      isLoggedIn = true;
-      username = savedUser;
+    logoutError = '';
+    logoutLoading = true;
+
+    try {
+      const response = await fetch('/api/auth/logout', { method: 'POST' });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        logoutError = typeof result.error === 'string' ? result.error : 'Failed to log out. Please try again.';
+        return;
+      }
+
+      await invalidateAll();
+    } catch (error) {
+      console.error('Logout failed', error);
+      logoutError = 'Failed to log out. Please try again.';
+    } finally {
+      logoutLoading = false;
     }
-  });
+  }
 </script>
 
 <SEO
@@ -166,31 +206,47 @@
           {#if isLoggedIn}
             <div class="text-center">
               <div class="w-16 h-16 bg-purple-200 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span class="text-2xl text-purple-700">{username.charAt(0).toUpperCase()}</span>
+                <span class="text-2xl text-purple-700">{displayInitial}</span>
               </div>
-              <p class="font-bold">{username}</p>
+              <p class="font-bold">{displayUsername}</p>
+              {#if displayEmail}
+                <p class="text-sm text-gray-500">{displayEmail}</p>
+              {/if}
               <div class="mt-4">
                 <a href="/forum/my-profile" class="text-sm text-purple-600 hover:underline block mb-2">My Profile</a>
                 <a href="/forum/my-posts" class="text-sm text-purple-600 hover:underline block mb-2">My Posts</a>
                 <a href="/forum/notifications" class="text-sm text-purple-600 hover:underline block mb-4">Notifications</a>
                 <button
                   on:click={handleLogout}
-                  class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded text-sm"
+                  class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded text-sm transition"
+                  disabled={logoutLoading}
                 >
-                  Log Out
+                  {#if logoutLoading}
+                    Logging out…
+                  {:else}
+                    Log Out
+                  {/if}
                 </button>
               </div>
+              {#if logoutError}
+                <p class="mt-3 text-sm text-red-600">{logoutError}</p>
+              {/if}
             </div>
           {:else}
             <form on:submit|preventDefault={handleLogin} class="space-y-4">
+              {#if loginError}
+                <div class="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{loginError}</div>
+              {/if}
               <div>
-                <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <label for="identifier" class="block text-sm font-medium text-gray-700 mb-1">Email or Username</label>
                 <input
                   type="text"
-                  id="username"
-                  bind:value={username}
+                  id="identifier"
+                  bind:value={loginForm.identifier}
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-purple-500"
                   required
+                  autocomplete="username"
+                  disabled={loginLoading}
                 />
               </div>
               <div>
@@ -198,17 +254,26 @@
                 <input
                   type="password"
                   id="password"
-                  bind:value={password}
+                  bind:value={loginForm.password}
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-purple-500"
                   required
+                  autocomplete="current-password"
+                  disabled={loginLoading}
                 />
               </div>
               <div>
                 <button
                   type="submit"
                   class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded font-medium"
+                  class:opacity-75={loginLoading}
+                  class:cursor-not-allowed={loginLoading}
+                  disabled={loginLoading}
                 >
-                  Login
+                  {#if loginLoading}
+                    Logging in…
+                  {:else}
+                    Login
+                  {/if}
                 </button>
               </div>
               <div class="text-center text-sm">
