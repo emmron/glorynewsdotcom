@@ -1,35 +1,32 @@
-import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
+import { creators, trendingCreatorIds } from '$lib/data/creators';
+import { posts } from '$lib/data/posts';
+import { categories } from '$lib/data/categories';
 
-export const load: PageServerLoad = async ({ fetch }) => {
-  try {
-    const response = await fetch('/api/news', {
-      headers: {
-        'Cache-Control': 'no-cache'
-      }
-    });
+const buildStats = () => {
+  const totalFollowers = creators.reduce((acc, creator) => acc + creator.followers, 0);
+  const totalLikes = creators.reduce((acc, creator) => acc + creator.likes, 0);
+  const totalViews = posts.reduce((acc, post) => acc + post.views, 0);
 
-    if (!response.ok) {
-      throw error(response.status, `Failed to load news articles: ${response.statusText}`);
-    }
+  return {
+    totalCreators: creators.length,
+    totalFollowers,
+    totalLikes,
+    totalPosts: posts.length,
+    totalViews
+  };
+};
 
-    const data = await response.json();
+export const load: PageServerLoad = async () => {
+  const trendingCreators = trendingCreatorIds
+    .map((id) => creators.find((creator) => creator.id === id))
+    .filter((creator): creator is (typeof creators)[number] => Boolean(creator));
 
-    if (!data.success) {
-      throw error(500, data.error || 'Failed to load articles');
-    }
-
-    return {
-      articles: data.articles,
-      timestamp: data.timestamp
-    };
-  } catch (err) {
-    // If it's already a SvelteKit error, just rethrow it
-    if (err && typeof err === 'object' && 'status' in err) {
-      throw err;
-    }
-
-    console.error('Error loading news:', err);
-    throw error(500, 'An unexpected error occurred while loading news articles');
-  }
+  return {
+    creators,
+    trendingCreators,
+    posts,
+    categories,
+    stats: buildStats()
+  };
 };

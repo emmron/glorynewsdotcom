@@ -15,12 +15,12 @@ body {
 
 /* Custom focus styles for better accessibility */
 .focus-ring:focus {
-  @apply outline-none ring-2 ring-purple-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-900 transition-all duration-200;
+  @apply outline-none ring-2 ring-sky-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-950 transition-all duration-200;
 }
 
 /* Gradient text */
 .gradient-text {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-purple-900 dark:from-purple-500 dark:to-purple-300;
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600 dark:from-sky-400 dark:to-blue-500;
 }
 
 /* Animation for page transitions */
@@ -98,6 +98,6 @@ body {
   }
 
   .prose a {
-    @apply text-glory-purple-600 no-underline font-medium hover:text-glory-purple-800 hover:underline;
+    @apply font-medium text-sky-500 no-underline hover:text-blue-600 hover:underline;
   }
 }

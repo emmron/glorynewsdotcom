@@ -5,38 +5,21 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Perth Glory colors
-        'glory-purple': {
-          50: '#f5f3ff',
-          100: '#ede9fe',
-          200: '#ddd6fe',
-          300: '#c4b5fd',
-          400: '#a78bfa',
-          500: '#8b5cf6',
-          600: '#7c3aed',
-          700: '#6d28d9',
-          800: '#5b21b6',
-          900: '#4c1d95',
-          950: '#2e1065',
+        'fans-sky': {
+          50: '#f0f9ff',
+          100: '#e0f2fe',
+          200: '#bae6fd',
+          300: '#7dd3fc',
+          400: '#38bdf8',
+          500: '#0ea5e9',
+          600: '#0284c7',
+          700: '#0369a1',
+          800: '#075985',
+          900: '#0c4a6e',
+          950: '#082f49'
         },
-        'glory-white': '#ffffff',
-        'glory-orange': {
-          500: '#f97316',
-          600: '#ea580c',
-          700: '#c2410c',
-        },
-        // A-League club colors
-        'perth-glory': '#6C1D45',
-        'melbourne-victory': '#002B5C',
-        'sydney-fc': '#0085CC',
-        'western-sydney': '#D7182A',
-        'adelaide-united': '#002B5C',
-        'brisbane-roar': '#FF1F29',
-        'central-coast': '#FFC400',
-        'macarthur-fc': '#002B5C',
-        'melbourne-city': '#6CADDF',
-        'newcastle-jets': '#007A4D',
-        'wellington-phoenix': '#000000',
+        'fans-cyan': '#22d3ee',
+        'fans-navy': '#0f172a'
       },
       fontFamily: {
         sans: [
@@ -53,47 +36,47 @@ export default {
       typography: (theme) => ({
         DEFAULT: {
           css: {
-            color: theme('colors.gray.700'),
+            color: theme('colors.slate.700'),
             a: {
-              color: theme('colors.purple.600'),
+              color: theme('colors.sky.600'),
               '&:hover': {
-                color: theme('colors.purple.800'),
+                color: theme('colors.blue.600'),
               },
             },
             h1: {
-              color: theme('colors.gray.900'),
+              color: theme('colors.slate.900'),
             },
             h2: {
-              color: theme('colors.gray.900'),
+              color: theme('colors.slate.900'),
             },
             h3: {
-              color: theme('colors.gray.900'),
+              color: theme('colors.slate.900'),
             },
             h4: {
-              color: theme('colors.gray.900'),
+              color: theme('colors.slate.900'),
             },
           },
         },
-        dark: {
+        invert: {
           css: {
-            color: theme('colors.gray.300'),
+            color: theme('colors.slate.300'),
             a: {
-              color: theme('colors.purple.400'),
+              color: theme('colors.sky.400'),
               '&:hover': {
-                color: theme('colors.purple.300'),
+                color: theme('colors.sky.300'),
               },
             },
             h1: {
-              color: theme('colors.gray.100'),
+              color: theme('colors.white'),
             },
             h2: {
-              color: theme('colors.gray.100'),
+              color: theme('colors.white'),
             },
             h3: {
-              color: theme('colors.gray.100'),
+              color: theme('colors.white'),
             },
             h4: {
-              color: theme('colors.gray.100'),
+              color: theme('colors.white'),
             },
           },
         },
