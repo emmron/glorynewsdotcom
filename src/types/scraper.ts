@@ -8,10 +8,15 @@ export interface SourceSelectors {
 
 export interface NewsSource {
   name: string;
-  baseUrl: string;
-  newsPath: string;
-  selectors: SourceSelectors;
+  baseUrl?: string;
+  newsPath?: string;
+  selectors?: SourceSelectors;
   updateInterval: number;
+  priority: 'high' | 'medium' | 'low';
+  platforms?: string[];
+  accounts?: {
+    [platform: string]: string[];
+  };
 }
 
 export interface RateLimit {
