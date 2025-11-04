@@ -7,7 +7,7 @@ const config = {
 		adapter: adapter({
 			runtime: 'nodejs22.x',
 			regions: ['syd1'],
-			split: true,
+			split: false,
 		}),
 		alias: {
 			$lib: 'src/lib'
