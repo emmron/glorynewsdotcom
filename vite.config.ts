@@ -7,11 +7,6 @@ export default defineConfig({
 	define: {
 		global: {}
 	},
-	resolve: {
-		alias: {
-			crypto: 'crypto-browserify'
-		}
-	},
 	server: {
 		fs: {
 			allow: ['.']
