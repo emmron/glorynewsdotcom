@@ -1,13 +1,12 @@
 import type { Handle } from '@sveltejs/kit';
 import type { PublicUser } from '$lib/server/userStore';
 import { SESSION_COOKIE_NAME, clearSessionCookieOptions, getUserFromSession } from '$lib/server/session';
+import { validateEnvironment } from '$lib/server/env';
 
-// Note: File system operations disabled for Vercel serverless compatibility
-// User data should be stored in a database (MongoDB, etc.) for production use
+// Validate environment on startup
+validateEnvironment();
 
 export const handle: Handle = async ({ event, resolve }) => {
-  // Skip user file initialization in serverless environments
-  // await ensureUsersFile();
 
   const locals = event.locals as typeof event.locals & { user?: PublicUser | null };
   const sessionCookie = event.cookies.get(SESSION_COOKIE_NAME);
