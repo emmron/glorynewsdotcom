@@ -1,8 +1,5 @@
-import { promises as fs } from 'fs';
-import * as path from 'path';
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
-
-const USERS_PATH = path.resolve('static/data/users.json');
+import { getDatabase } from './mongodb';
 
 export interface StoredUser {
 	id: string;
@@ -23,59 +20,39 @@ export interface PublicUser {
 	updatedAt: string;
 }
 
-let ensureUsersFilePromise: Promise<void> | null = null;
-
-async function ensureUsersFile(): Promise<void> {
-	if (!ensureUsersFilePromise) {
-		ensureUsersFilePromise = (async () => {
-			try {
-				await fs.access(USERS_PATH);
-			} catch {
-				try {
-					await fs.mkdir(path.dirname(USERS_PATH), { recursive: true });
-					await fs.writeFile(USERS_PATH, '[]', 'utf-8');
-				} catch (error) {
-					// In serverless environments (Vercel), filesystem is read-only
-					// This is expected and should not crash the app
-					console.warn('Unable to create users file (serverless environment):', error);
-				}
-			}
-		})();
+async function getUsersCollection() {
+	const db = await getDatabase();
+	if (!db) {
+		console.warn('Database not available for user operations');
+		return null;
 	}
-
-	return ensureUsersFilePromise;
+	return db.collection<StoredUser>('users');
 }
 
-async function readUsers(): Promise<StoredUser[]> {
-	await ensureUsersFile();
+export async function getUserById(id: string): Promise<StoredUser | undefined> {
+	const users = await getUsersCollection();
+	if (!users) return undefined;
 
-	try {
-		const fileContents = await fs.readFile(USERS_PATH, 'utf-8');
-		if (!fileContents.trim()) {
-			return [];
-		}
-
-		const parsed = JSON.parse(fileContents) as StoredUser[] | null;
-		if (!Array.isArray(parsed)) {
-			return [];
-		}
-
-		return parsed;
-	} catch (error) {
-		console.warn('Failed to read users file (serverless environment):', error);
-		// In serverless environments, return empty array instead of crashing
-		return [];
-	}
+	const user = await users.findOne({ id });
+	return user || undefined;
 }
 
-async function writeUsers(users: StoredUser[]): Promise<void> {
-	await ensureUsersFile();
-	try {
-		await fs.writeFile(USERS_PATH, JSON.stringify(users, null, 2), 'utf-8');
-	} catch (error) {
-		console.warn('Failed to write users file (serverless environment):', error);
-		throw new Error('User storage not available in serverless environment. Please configure a database.');
-	}
+export async function getUserByEmail(email: string): Promise<StoredUser | undefined> {
+	const users = await getUsersCollection();
+	if (!users) return undefined;
+
+	const normalized = email.toLowerCase();
+	const user = await users.findOne({ emailLower: normalized });
+	return user || undefined;
+}
+
+export async function getUserByUsername(username: string): Promise<StoredUser | undefined> {
+	const users = await getUsersCollection();
+	if (!users) return undefined;
+
+	const normalized = username.toLowerCase();
+	const user = await users.findOne({ username: new RegExp(`^${normalized}$`, 'i') });
+	return user || undefined;
 }
 
 function sanitizeUser(user: StoredUser): PublicUser {
@@ -97,36 +74,26 @@ function hashPassword(password: string, salt?: string) {
 	};
 }
 
-export async function getUserById(id: string): Promise<StoredUser | undefined> {
-	const users = await readUsers();
-	return users.find((user) => user.id === id);
-}
-
-export async function getUserByEmail(email: string): Promise<StoredUser | undefined> {
-	const users = await readUsers();
-	const normalized = email.toLowerCase();
-	return users.find((user) => user.emailLower === normalized);
-}
-
-export async function getUserByUsername(username: string): Promise<StoredUser | undefined> {
-	const users = await readUsers();
-	const normalized = username.toLowerCase();
-	return users.find((user) => user.username.toLowerCase() === normalized);
-}
-
 export async function createUser(params: { username: string; email: string; password: string }): Promise<PublicUser> {
 	const { username, email, password } = params;
+	const users = await getUsersCollection();
 
-	const users = await readUsers();
+	if (!users) {
+		throw new Error('Database not available. User registration is disabled.');
+	}
 
 	const normalizedEmail = email.toLowerCase();
 	const normalizedUsername = username.toLowerCase();
 
-	if (users.some((user) => user.emailLower === normalizedEmail)) {
+	// Check if email already exists
+	const existingEmail = await users.findOne({ emailLower: normalizedEmail });
+	if (existingEmail) {
 		throw new Error('Email already in use');
 	}
 
-	if (users.some((user) => user.username.toLowerCase() === normalizedUsername)) {
+	// Check if username already exists
+	const existingUsername = await users.findOne({ username: new RegExp(`^${normalizedUsername}$`, 'i') });
+	if (existingUsername) {
 		throw new Error('Username already taken');
 	}
 
@@ -144,8 +111,7 @@ export async function createUser(params: { username: string; email: string; pass
 		updatedAt: now
 	};
 
-	users.push(newUser);
-	await writeUsers(users);
+	await users.insertOne(newUser);
 
 	return sanitizeUser(newUser);
 }
@@ -167,4 +133,4 @@ export async function verifyPassword(user: StoredUser, password: string): Promis
 	}
 }
 
-export { sanitizeUser, ensureUsersFile, readUsers as _readUsers, writeUsers as _writeUsers };
+export { sanitizeUser };

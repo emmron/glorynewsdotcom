@@ -1,51 +1,47 @@
 import type { RequestHandler } from './$types';
 import type { Comment } from '../../../../types/comment';
 import { json } from '@sveltejs/kit';
-import { promises as fs } from 'fs';
-import * as path from 'path';
+import { getDatabase } from '$lib/server/mongodb';
 
-// Define the storage directory for comments
-const COMMENTS_DIR = path.resolve('static/data/comments');
-
-// Ensure comments directory exists
-async function ensureCommentsDir() {
-  try {
-    await fs.mkdir(COMMENTS_DIR, { recursive: true });
-  } catch (error) {
-    console.warn('Failed to create comments directory (serverless environment):', error);
-    // This is expected in serverless environments and should not crash
+// Get comments collection
+async function getCommentsCollection() {
+  const db = await getDatabase();
+  if (!db) {
+    console.warn('Database not available for comment operations');
+    return null;
   }
-}
-
-// Get comments file path for an article
-function getCommentsFilePath(articleId: string): string {
-  return path.join(COMMENTS_DIR, `${articleId}.json`);
+  return db.collection<Comment>('comments');
 }
 
 // Load comments for an article
 async function loadComments(articleId: string): Promise<Comment[]> {
-  await ensureCommentsDir();
-  const filePath = getCommentsFilePath(articleId);
+  const comments = await getCommentsCollection();
+  if (!comments) return [];
 
   try {
-    const data = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(data);
+    const results = await comments
+      .find({ articleId })
+      .sort({ createdAt: -1 })
+      .toArray();
+    return results;
   } catch (error) {
-    // If file doesn't exist or has invalid content, return empty array
+    console.error('Failed to load comments:', error);
     return [];
   }
 }
 
-// Save comments for an article
-async function saveComments(articleId: string, comments: Comment[]): Promise<void> {
-  await ensureCommentsDir();
-  const filePath = getCommentsFilePath(articleId);
+// Save a new comment
+async function saveComment(comment: Comment): Promise<void> {
+  const comments = await getCommentsCollection();
+  if (!comments) {
+    throw new Error('Database not available. Comments are disabled.');
+  }
 
   try {
-    await fs.writeFile(filePath, JSON.stringify(comments, null, 2), 'utf-8');
+    await comments.insertOne(comment);
   } catch (error) {
-    console.warn(`Failed to save comments for article ${articleId} (serverless environment):`, error);
-    throw new Error('Comment storage not available in serverless environment. Please configure a database.');
+    console.error('Failed to save comment:', error);
+    throw new Error('Failed to save comment to database.');
   }
 }
 
@@ -78,25 +74,22 @@ export const POST: RequestHandler = async ({ request, params }) => {
       return json({ error: 'Author name and text are required' }, { status: 400 });
     }
 
-    // Load existing comments
-    const comments = await loadComments(articleId);
-
     // Create new comment
     const newComment: Comment = {
-      id: crypto.randomUUID(), // Use UUID for production-ready IDs
+      id: crypto.randomUUID(),
       articleId,
       authorName,
       text,
       createdAt: new Date(),
     };
 
-    // Add comment and save
-    comments.push(newComment);
-    await saveComments(articleId, comments);
+    // Save comment to database
+    await saveComment(newComment);
 
     return json(newComment, { status: 201 });
   } catch (error) {
     console.error('Error creating comment:', error);
-    return json({ error: 'Failed to create comment' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Failed to create comment';
+    return json({ error: errorMessage }, { status: 500 });
   }
 };
