@@ -12,7 +12,8 @@ async function ensureCommentsDir() {
   try {
     await fs.mkdir(COMMENTS_DIR, { recursive: true });
   } catch (error) {
-    console.error('Failed to create comments directory:', error);
+    console.warn('Failed to create comments directory (serverless environment):', error);
+    // This is expected in serverless environments and should not crash
   }
 }
 
@@ -43,8 +44,8 @@ async function saveComments(articleId: string, comments: Comment[]): Promise<voi
   try {
     await fs.writeFile(filePath, JSON.stringify(comments, null, 2), 'utf-8');
   } catch (error) {
-    console.error(`Failed to save comments for article ${articleId}:`, error);
-    throw new Error('Failed to save comments');
+    console.warn(`Failed to save comments for article ${articleId} (serverless environment):`, error);
+    throw new Error('Comment storage not available in serverless environment. Please configure a database.');
   }
 }
 

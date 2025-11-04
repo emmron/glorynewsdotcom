@@ -1,23 +1,13 @@
 import type { Handle } from '@sveltejs/kit';
-import * as fs from 'fs';
-import * as path from 'path';
-import { ensureUsersFile } from '$lib/server/userStore';
 import type { PublicUser } from '$lib/server/userStore';
 import { SESSION_COOKIE_NAME, clearSessionCookieOptions, getUserFromSession } from '$lib/server/session';
 
-// Create comments directory on startup
-const COMMENTS_DIR = path.resolve('static/data/comments');
-try {
-  if (!fs.existsSync(COMMENTS_DIR)) {
-    fs.mkdirSync(COMMENTS_DIR, { recursive: true });
-    console.log('Comments directory created at:', COMMENTS_DIR);
-  }
-} catch (error) {
-  console.error('Failed to create comments directory:', error);
-}
+// Note: File system operations disabled for Vercel serverless compatibility
+// User data should be stored in a database (MongoDB, etc.) for production use
 
 export const handle: Handle = async ({ event, resolve }) => {
-  await ensureUsersFile();
+  // Skip user file initialization in serverless environments
+  // await ensureUsersFile();
 
   const locals = event.locals as typeof event.locals & { user?: PublicUser | null };
   const sessionCookie = event.cookies.get(SESSION_COOKIE_NAME);

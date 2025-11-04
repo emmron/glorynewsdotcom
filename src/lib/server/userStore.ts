@@ -31,8 +31,14 @@ async function ensureUsersFile(): Promise<void> {
 			try {
 				await fs.access(USERS_PATH);
 			} catch {
-				await fs.mkdir(path.dirname(USERS_PATH), { recursive: true });
-				await fs.writeFile(USERS_PATH, '[]', 'utf-8');
+				try {
+					await fs.mkdir(path.dirname(USERS_PATH), { recursive: true });
+					await fs.writeFile(USERS_PATH, '[]', 'utf-8');
+				} catch (error) {
+					// In serverless environments (Vercel), filesystem is read-only
+					// This is expected and should not crash the app
+					console.warn('Unable to create users file (serverless environment):', error);
+				}
 			}
 		})();
 	}
@@ -56,15 +62,20 @@ async function readUsers(): Promise<StoredUser[]> {
 
 		return parsed;
 	} catch (error) {
-		console.error('Failed to read users file. Resetting to empty array.', error);
-		await fs.writeFile(USERS_PATH, '[]', 'utf-8');
+		console.warn('Failed to read users file (serverless environment):', error);
+		// In serverless environments, return empty array instead of crashing
 		return [];
 	}
 }
 
 async function writeUsers(users: StoredUser[]): Promise<void> {
 	await ensureUsersFile();
-	await fs.writeFile(USERS_PATH, JSON.stringify(users, null, 2), 'utf-8');
+	try {
+		await fs.writeFile(USERS_PATH, JSON.stringify(users, null, 2), 'utf-8');
+	} catch (error) {
+		console.warn('Failed to write users file (serverless environment):', error);
+		throw new Error('User storage not available in serverless environment. Please configure a database.');
+	}
 }
 
 function sanitizeUser(user: StoredUser): PublicUser {
